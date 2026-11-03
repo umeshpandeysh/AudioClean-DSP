@@ -1,4 +1,4 @@
-﻿"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
+"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
 
 Phase 4 Implementation for AudioClean DSP.
 """
@@ -268,7 +268,7 @@ if workspace.startswith("1"):
                 f"- **Channels:** `{info['num_channels']}` ({'Mono' if info['num_channels'] == 1 else 'Stereo'})\n"
                 f"- **Samples:** `{info['num_samples']:,}` ({info['duration_seconds']:.3f} s)\n"
                 f"- **Peak Amplitude:** `{info['peak_amplitude']:.4f}`\n"
-                f"- **RMS Level:** `{info['rms_level']:.4f}`\n"
+                f"- **RMS Level:** `{info['rms_amplitude']:.4f}`\n"
                 f"- **Crest Factor:** `{info['crest_factor_db']:.2f} dB`"
             )
 
@@ -900,8 +900,8 @@ elif workspace.startswith("5"):
                         out_fir = fir_mod.apply_fir_filter(sig, fir_des, mode=comp_mode)
                         out_iir = iir_mod.apply_iir_filter(sig, iir_des, mode=comp_mode)
 
-                        fir_ms = t_fir["median"] * 1000.0
-                        iir_ms = t_iir["median"] * 1000.0
+                        fir_ms = t_fir["median_ms"]
+                        iir_ms = t_iir["median_ms"]
                         speedup = fir_ms / iir_ms if iir_ms > 0 else 1.0
 
                     summary_md = f"""
