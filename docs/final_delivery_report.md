@@ -83,7 +83,7 @@
 
 ## 5. Quantitative Performance and Complexity Analysis
 
-Controlled benchmarks on 64-bit AMD64 ($f_s = 44,100\text{ Hz}$), 30 repetitions, 5 warm-up iterations using `scripts/benchmark_performance.py` (synthetic composite test signal: 440 Hz + 1200 Hz with 10 dB WGN):
+Controlled benchmarks on 64-bit AMD64 ($f_s = 44,100\text{ Hz}$), 30 repetitions, 5 warm-up iterations using `scripts/benchmark_performance.py` (synthetic composite multi-tone harmonic test signal: 440 Hz, 880 Hz, 1760 Hz, 3520 Hz with 10 dB target WGN):
 
 | Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

@@ -121,7 +121,7 @@ The application (`app.py`) was verified using interactive `streamlit.testing.v1.
 
 ## 6. Performance & Resource Benchmarking
 
-Performance was benchmarked under strictly controlled reproducible conditions using a synthetic composite test signal (440 Hz fundamental + 1200 Hz harmonic with 10 dB target WGN, $f_s = 44,100\text{ Hz}$). Benchmarks were conducted over **30 repetitions** with **5 warm-up iterations**, reporting the exact median execution latency and standard deviation from `scripts/benchmark_performance.py`:
+Performance was benchmarked under strictly controlled reproducible conditions using a synthetic composite multi-tone harmonic test signal (440 Hz, 880 Hz, 1760 Hz, 3520 Hz with 10 dB target WGN, $f_s = 44,100\text{ Hz}$). Benchmarks were conducted over **30 repetitions** with **5 warm-up iterations**, reporting the exact median execution latency and standard deviation from `scripts/benchmark_performance.py`:
 
 | Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
