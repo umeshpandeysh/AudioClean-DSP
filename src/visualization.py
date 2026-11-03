@@ -110,7 +110,7 @@ def plot_waveform(
     ax.set_ylabel("Amplitude (Normalized)", fontsize=10)
     ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
     ax.set_ylim(-1.05, 1.05)
-    ax.axhline(0, color="black", linewidth=0.6, alpha=0.5)
+    ax.axhline(0, color=_COLORS["reference"], linewidth=0.8, alpha=0.7)
 
     if time_range is not None:
         if time_range[0] < time_range[1]:
@@ -173,8 +173,8 @@ def plot_fft_spectrum(
     else:
         ax.set_ylabel("Linear Amplitude", fontsize=10)
 
-    ax.plot(frequencies, y_data, color=_COLORS["noisy"], linewidth=1.0)
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.plot(frequencies, y_data, color=_COLORS["spectrum"], linewidth=1.15)
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#14243B", loc="left", pad=12)
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
     ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
 
@@ -249,7 +249,7 @@ def plot_spectrogram(
     cbar.ax.tick_params(labelsize=8, colors="#52627A")
     cbar.outline.set_edgecolor("#C9D4E2")
 
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#14243B", loc="left", pad=12)
     ax.set_xlabel("Time (seconds)", fontsize=10)
     ax.set_ylabel("Frequency (Hz)", fontsize=10)
     ax.set_ylim(0, f_plot[-1])
@@ -299,13 +299,13 @@ def plot_filter_response(
     fig, ax = _create_figure((11, 4.0))
 
     ax.plot(frequencies, magnitude_db, color=_COLORS["filtered"], linewidth=1.5, label="Magnitude Response |H(f)|")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#14243B", loc="left", pad=12)
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
-    ax.set_ylabel("Attenuation (dB)", fontsize=10)
+    ax.set_ylabel("Magnitude (dB)", fontsize=10)
     ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
 
     # Highlight -3 dB passband edge
-    ax.axhline(-3.0, color=_COLORS["threshold"], linestyle=":", linewidth=1.0, label="-3 dB Cutoff Threshold")
+    ax.axhline(-3.0, color=_COLORS["threshold"], linestyle=":", linewidth=1.0, label="−3 dB reference level")
 
     if cutoff_hz is not None:
         if isinstance(cutoff_hz, (list, tuple, np.ndarray)):
@@ -376,7 +376,7 @@ def plot_phase_response(
     fig, ax = _create_figure((11, 4.0))
 
     ax.plot(frequencies, phase_radians, color=_COLORS["phase"], linewidth=1.2, label="Unwrapped Phase theta(f)")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#14243B", loc="left", pad=12)
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
     ax.set_ylabel("Phase (radians)", fontsize=10)
     ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
