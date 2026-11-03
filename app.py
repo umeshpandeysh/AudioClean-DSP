@@ -152,6 +152,32 @@ def format_speedup(val: Optional[Union[float, int]]) -> str:
     except (TypeError, ValueError):
         return "N/A"
 
+
+def reset_reference_uploader() -> None:
+    """Explicitly invalidate and reset the external reference uploader widget lifecycle.
+
+    Pops the existing widget key from session state and increments the version counter,
+    ensuring Streamlit destroys the internal file buffer and cannot silently retain
+    or reattach a previously uploaded reference file.
+    """
+    st.session_state.reference_audio = None
+    st.session_state.ref_file_hash = None
+    st.session_state.ref_primary_hash = None
+    curr_v = st.session_state.get("ref_uploader_version", 0)
+    old_key = f"ref_uploader_v{curr_v}"
+    st.session_state.pop(old_key, None)
+    st.session_state.ref_uploader_version = curr_v + 1
+
+
+def reset_primary_uploader() -> None:
+    """Explicitly reset the primary audio uploader and all associated reference state."""
+    curr_v = st.session_state.get("primary_uploader_version", 0)
+    old_key = f"primary_audio_uploader_v{curr_v}"
+    st.session_state.pop(old_key, None)
+    st.session_state.primary_uploader_version = curr_v + 1
+    st.session_state.primary_file_hash = None
+    reset_reference_uploader()
+
 # -----------------------------------------------------------------------------
 # Session State Initialization
 # -----------------------------------------------------------------------------
@@ -175,6 +201,10 @@ if "ref_primary_hash" not in st.session_state:
     st.session_state.ref_primary_hash = None
 if "active_ingest_mode" not in st.session_state:
     st.session_state.active_ingest_mode = "Workflow A"
+if "ref_uploader_version" not in st.session_state:
+    st.session_state.ref_uploader_version = 0
+if "primary_uploader_version" not in st.session_state:
+    st.session_state.primary_uploader_version = 0
 
 # Synthesize default demo tone if no audio loaded
 if st.session_state.audio_data is None:
@@ -265,8 +295,7 @@ if workspace.startswith("1"):
         # Detect ingest mode change
         if selected_mode_key != st.session_state.active_ingest_mode:
             st.session_state.active_ingest_mode = selected_mode_key
-            st.session_state.ref_file_hash = None
-            st.session_state.ref_primary_hash = None
+            reset_reference_uploader()
             if selected_mode_key == "Workflow A":
                 if st.session_state.source_type in ("synthetic", "clean_upload"):
                     st.session_state.reference_audio = (
@@ -279,7 +308,8 @@ if workspace.startswith("1"):
                 st.session_state.reference_audio = None
             st.rerun()
 
-        uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"], key="primary_audio_uploader")
+        primary_key = f"primary_audio_uploader_v{st.session_state.primary_uploader_version}"
+        uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"], key=primary_key)
         if uploaded_file is not None:
             raw_bytes = uploaded_file.getvalue()
             f_hash = compute_file_hash(raw_bytes)
@@ -292,8 +322,8 @@ if workspace.startswith("1"):
                     pre_mod.validate_audio(data, in_sr)
                     st.session_state.sample_rate = in_sr
                     st.session_state.primary_file_hash = f_hash
-                    st.session_state.ref_file_hash = None  # Clear any stale reference
-                    st.session_state.ref_primary_hash = None
+                    # Invalidate reference uploader lifecycle and state immediately
+                    reset_reference_uploader()
                     st.session_state.noise_component = None
 
                     if selected_mode_key == "Workflow A":
@@ -311,10 +341,8 @@ if workspace.startswith("1"):
                 except Exception as e:
                     st.error(f"Failed to load audio file: {e}")
         elif uploaded_file is None and st.session_state.primary_file_hash is not None:
-            # Primary upload removed: reset to default synthetic demo
-            st.session_state.primary_file_hash = None
-            st.session_state.ref_file_hash = None
-            st.session_state.ref_primary_hash = None
+            # Primary upload removed: reset uploader lifecycle and restore default synthetic demo
+            reset_primary_uploader()
             st.session_state.noise_component = None
             sr_demo = 44100
             t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
@@ -338,6 +366,7 @@ if workspace.startswith("1"):
                 "Please upload a clean audio recording above or reset to the synthetic clean demo tone."
             )
             if st.button("Reset to Synthetic Clean Demo Tone", key="btn_reset_demo_workflow_a"):
+                reset_primary_uploader()
                 sr_demo = 44100
                 t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
                 demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
@@ -348,9 +377,6 @@ if workspace.startswith("1"):
                 st.session_state.reference_audio = demo_signal.copy()
                 st.session_state.noisy_audio = demo_signal.copy()
                 st.session_state.noise_component = None
-                st.session_state.primary_file_hash = None
-                st.session_state.ref_file_hash = None
-                st.session_state.ref_primary_hash = None
                 st.success("Reset to synthetic clean demo signal.")
                 st.rerun()
 
@@ -362,13 +388,17 @@ if workspace.startswith("1"):
                 "upload it below. Note: Matching sample rate and shape does not guarantee synchronization; "
                 "the user must ensure the reference is aligned."
             )
-            ref_file = st.file_uploader("Upload Reference Audio (.wav)", type=["wav"], key="ref_uploader")
+            ref_uploader_key = f"ref_uploader_v{st.session_state.ref_uploader_version}"
+            ref_file = st.file_uploader(
+                "Upload Reference Audio (.wav)",
+                type=["wav"],
+                key=ref_uploader_key,
+            )
             if ref_file is None:
-                if st.session_state.ref_file_hash is not None:
-                    st.session_state.reference_audio = None
-                    st.session_state.ref_file_hash = None
-                    st.session_state.ref_primary_hash = None
+                if st.session_state.ref_file_hash is not None or st.session_state.reference_audio is not None:
+                    reset_reference_uploader()
                     st.info("External reference removed. Switched to no-reference evaluation.")
+                    st.rerun()
             else:
                 current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
                 r_bytes = ref_file.getvalue()
@@ -391,15 +421,13 @@ if workspace.startswith("1"):
                             st.session_state.ref_primary_hash = current_primary_hash
                             st.success("Clean reference attached! Workflow A objective metrics enabled.")
                         else:
-                            st.session_state.reference_audio = None
-                            st.session_state.ref_file_hash = None
-                            st.session_state.ref_primary_hash = None
+                            reset_reference_uploader()
                             st.error(f"Reference rejected: {msg}")
+                            st.rerun()
                     except Exception as e:
-                        st.session_state.reference_audio = None
-                        st.session_state.ref_file_hash = None
-                        st.session_state.ref_primary_hash = None
+                        reset_reference_uploader()
                         st.error(f"Failed to load reference: {e}")
+                        st.rerun()
 
     with col_up2:
         st.subheader("Preprocessing and Controls")

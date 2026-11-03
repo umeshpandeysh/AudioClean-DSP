@@ -43,9 +43,9 @@
 5. **Workflow A / Workflow B Provenance Leakage:**
    - *Problem:* Switching from Workflow B to Workflow A copied degraded audio into `reference_audio`, treating it as clean ground truth.
    - *Fix:* Enforced provenance tracking in `st.session_state.source_type`; switching to Workflow A only restores `reference_audio` if provenance is synthetic or clean upload. Degraded audio leaves `reference_audio = None` with a warning banner and reset-to-clean button.
-6. **Stale External Reference Lifecycle:**
-   - *Problem:* Replacing a primary recording or clearing the reference uploader left stale reference audio attached.
-   - *Fix:* Tied references to primary recording SHA-256 fingerprint (`ref_primary_hash`). Detached reference on primary replacement, removal, same-shape mismatch, or invalid upload.
+6. **Stale External Reference Lifecycle & Widget Invalidation:**
+   - *Problem:* Replacing a primary recording or clearing the reference uploader left stale reference audio attached, or allowed Streamlit's internal widget buffer to silently reattach an old uploaded reference file to a new primary recording.
+   - *Fix:* Tied references to primary recording SHA-256 fingerprint (`ref_primary_hash`). Detached reference on primary replacement, removal, same-shape mismatch, or invalid upload. Enforced dynamic uploader keys (`ref_uploader_v{version}`) and state popping on primary change, primary removal, and workflow switching, preventing silent reattachment.
 7. **Unsafe Speedup Ratio Formatting:**
    - *Problem:* Evaluating `report.speedup_ratio > 0` raised `TypeError` when `speedup_ratio` was `None`.
    - *Fix:* Added `format_speedup()` helper returning `"N/A"` for None, non-finite, and non-positive numbers without throwing exceptions. Fixed repeated FIR metrics in benchmark comparison table.
@@ -56,14 +56,14 @@
 
 ### 4.1 Automated Pytest Regression Suite
 - **Command:** `.\.venv\Scripts\python.exe -m pytest -v tests`
-- **Total Tests Collected:** 149
-- **Passed Tests:** 149 (100%)
+- **Total Tests Collected:** 150
+- **Passed Tests:** 150 (100%)
 - **Failed Tests:** 0
 - **Skipped Tests:** 0
 - **Exit Code:** 0 (Clean Pass)
 
 ### 4.2 Module Breakdown (Exact Counts):
-- `tests/test_app.py`: 20 tests (UI contracts, state persistence, workflow provenance, reference lifecycle, speedup formatting, and AppTest multi-workspace navigation)
+- `tests/test_app.py`: 21 tests (UI contracts, state persistence, workflow provenance, reference lifecycle, uploader dynamic key invalidation, speedup formatting, and AppTest multi-workspace navigation)
 - `tests/test_audio_io.py`: 9 tests
 - `tests/test_comparison.py`: 9 tests
 - `tests/test_fft_analysis.py`: 15 tests
@@ -83,18 +83,18 @@
 
 ## 5. Quantitative Performance and Complexity Analysis
 
-Controlled benchmarks on 64-bit AMD64 ($f_s = 44,100\text{ Hz}$), 30 repetitions, 5 warm-up iterations:
+Controlled benchmarks on 64-bit AMD64 ($f_s = 44,100\text{ Hz}$), 30 repetitions, 5 warm-up iterations using `scripts/benchmark_performance.py` (synthetic composite test signal: 440 Hz + 1200 Hz with 10 dB WGN):
 
-| Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1.0 s** | 44,100 | 3.15 ms | 1.44 ms | 1.01 ms | 0.55 ms | 2.54 ms | 1.75 ms | **3.13x** | **2.61x** |
-| **5.0 s** | 220,500 | 18.22 ms | 9.00 ms | 6.17 ms | 3.06 ms | 14.81 ms | 14.83 ms | **2.95x** | **2.94x** |
-| **30.0 s** | 1,323,000 | 103.11 ms | 53.45 ms | 35.14 ms | 18.58 ms | 105.58 ms | 97.38 ms | **2.93x** | **2.88x** |
-| **60.0 s** | 2,646,000 | 214.47 ms | 112.04 ms | 69.05 ms | 35.82 ms | 202.63 ms | 183.90 ms | **3.11x** | **3.13x** |
+| Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1.0 s** | 44,100 | 3.67 ± 0.58 ms | 4.13 ± 5.48 ms | 1.13 ± 0.44 ms | 1.04 ± 0.63 ms | **3.25x** | **3.97x** |
+| **5.0 s** | 220,500 | 27.08 ± 7.65 ms | 18.86 ± 11.21 ms | 7.38 ± 3.08 ms | 5.36 ± 0.50 ms | **3.67x** | **3.52x** |
+| **30.0 s** | 1,323,000 | 146.15 ± 19.08 ms | 75.90 ± 36.83 ms | 43.64 ± 4.44 ms | 24.58 ± 5.99 ms | **3.35x** | **3.09x** |
+| **60.0 s** | 2,646,000 | 257.47 ± 41.23 ms | 150.77 ± 29.79 ms | 89.34 ± 41.63 ms | 49.23 ± 6.57 ms | **2.88x** | **3.06x** |
 
 **Engineering Observations:**
-- **Configuration Specificity:** Demonstrates recursion efficiency of low-order IIR sections (4th-order SOS) versus convolution of 101-tap FIR filters.
-- **Complexity:** Execution latency scales in direct proportion to signal length $N$ across all filter types and spectral transforms.
+- **Configuration Specificity:** Demonstrates recursion efficiency of low-order IIR sections (4th-order SOS) versus convolution of 101-tap FIR filters. Direct time-domain filtering measurements are isolated from spectral transforms.
+- **Complexity:** Execution latency scales in direct proportion to signal length $N$ across all filter types.
 
 ---
 

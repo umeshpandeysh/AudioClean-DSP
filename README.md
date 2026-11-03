@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-1.66.1-red.svg)](https://streamlit.io/)
-[![Tests Passing](https://img.shields.io/badge/pytest-149%20passed-brightgreen.svg)](https://pytest.org/)
+[![Tests Passing](https://img.shields.io/badge/pytest-150%20passed-brightgreen.svg)](https://pytest.org/)
 
 **AudioClean DSP** is a comprehensive undergraduate Digital Signal Processing (DSP) engineering application and laboratory workbench designed for digital audio noise removal and rigorous, scientifically grounded comparative performance analysis between **Finite Impulse Response (FIR)** and **Infinite Impulse Response (IIR)** digital filters.
 
@@ -183,7 +183,7 @@ Open your browser to `http://localhost:8501`.
 
 ## 7. Running the Automated Test Suite
 
-Run all 149 unit, integration, and contract tests:
+Run all 150 unit, integration, and contract tests:
 ```powershell
 python -m pytest -v tests
 ```
@@ -208,16 +208,16 @@ python scripts/benchmark_performance.py
 
 ## 8. Quantitative Performance Summary
 
-Benchmark measurements performed on 64-bit Windows AMD64 using 30 trials with 5 warm-up iterations on synthetic composite test signals ($f_s = 44,100\text{ Hz}$):
+Benchmark measurements performed on 64-bit Windows AMD64 using 30 trials with 5 warm-up iterations on synthetic composite test signals (440 Hz fundamental + 1200 Hz harmonic with 10 dB target WGN, $f_s = 44,100\text{ Hz}$):
 
-| Audio Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1.0 s** | 44,100 | 3.15 ms | 1.44 ms | 1.01 ms | 0.55 ms | 2.54 ms | 1.75 ms | **3.13x** | **2.61x** |
-| **5.0 s** | 220,500 | 18.22 ms | 9.00 ms | 6.17 ms | 3.06 ms | 14.81 ms | 14.83 ms | **2.95x** | **2.94x** |
-| **30.0 s** | 1,323,000 | 103.11 ms | 53.45 ms | 35.14 ms | 18.58 ms | 105.58 ms | 97.38 ms | **2.93x** | **2.88x** |
-| **60.0 s** | 2,646,000 | 214.47 ms | 112.04 ms | 69.05 ms | 35.82 ms | 202.63 ms | 183.90 ms | **3.11x** | **3.13x** |
+| Audio Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1.0 s** | 44,100 | 3.67 ± 0.58 ms | 4.13 ± 5.48 ms | 1.13 ± 0.44 ms | 1.04 ± 0.63 ms | **3.25x** | **3.97x** |
+| **5.0 s** | 220,500 | 27.08 ± 7.65 ms | 18.86 ± 11.21 ms | 7.38 ± 3.08 ms | 5.36 ± 0.50 ms | **3.67x** | **3.52x** |
+| **30.0 s** | 1,323,000 | 146.15 ± 19.08 ms | 75.90 ± 36.83 ms | 43.64 ± 4.44 ms | 24.58 ± 5.99 ms | **3.35x** | **3.09x** |
+| **60.0 s** | 2,646,000 | 257.47 ± 41.23 ms | 150.77 ± 29.79 ms | 89.34 ± 41.63 ms | 49.23 ± 6.57 ms | **2.88x** | **3.06x** |
 
-*Note on Configuration Specificity:* These benchmarks reflect the specific comparison between a 101-tap FIR filter and a 4th-order Butterworth IIR filter. They demonstrate the recursion efficiency of low-order IIR sections compared to high-tap FIR convolution, but do not imply universal superiority under all filter specifications.
+*Note on Configuration Specificity:* These benchmarks reflect the specific comparison between a 101-tap FIR filter and a 4th-order Butterworth IIR filter. They demonstrate the recursion efficiency of low-order IIR sections compared to high-tap FIR convolution, but do not imply universal superiority under all filter specifications. Filter benchmarks represent direct time-domain filtering (`scipy.signal.lfilter`/`filtfilt` vs `sosfilt`/`sosfiltfilt`) and are reported separately from spectral transformations (FFT/STFT).
 
 ---
 

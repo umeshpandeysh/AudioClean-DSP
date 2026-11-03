@@ -33,15 +33,15 @@ The test suite was executed using:
 ```
 
 ### Summary of Results:
-- **Total Tests Collected:** 149
-- **Tests Passed:** 149 (100%)
+- **Total Tests Collected:** 150
+- **Tests Passed:** 150 (100%)
 - **Tests Failed:** 0
 - **Tests Skipped:** 0
 - **Exit Code:** 0 (Clean Pass)
 
 ### Exact Breakdown by Test Module:
-1. `tests/test_app.py`: 20 passed
-   - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, SHA-256 file fingerprinting, strict external reference upload validation (`validate_reference_match`), linked gain normalization preserving relative SNR, safe `format_speedup` formatting, Workflow A/B provenance tracking, reference lifecycle detachment/invalidation on primary change/removal/same-shape replacements, and interactive `streamlit.testing.v1.AppTest` session state persistence across app reruns, workflow toggles, and workspace navigation.
+1. `tests/test_app.py`: 21 passed
+   - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, SHA-256 file fingerprinting, strict external reference upload validation (`validate_reference_match`), linked gain normalization preserving relative SNR, safe `format_speedup` formatting, Workflow A/B provenance tracking, reference lifecycle detachment/invalidation on primary change/removal/same-shape replacements, full widget uploader dynamic key lifecycle reset helpers, and interactive `streamlit.testing.v1.AppTest` session state persistence across app reruns, workflow toggles, and workspace navigation.
 2. `tests/test_audio_io.py`: 9 passed
    - Mono/stereo WAV loading, float64 representation, PCM16 round-trip, clipping protection, non-finite rejection, metadata inspection, safe overwrite protection.
 3. `tests/test_comparison.py`: 9 passed
@@ -121,19 +121,19 @@ The application (`app.py`) was verified using interactive `streamlit.testing.v1.
 
 ## 6. Performance & Resource Benchmarking
 
-Performance was benchmarked under strictly controlled reproducible conditions using a synthetic composite test signal (440 Hz fundamental + 1200 Hz harmonic with 10 dB target WGN, $f_s = 44,100\text{ Hz}$). Benchmarks were conducted over **30 repetitions** with **5 warm-up iterations**, reporting the exact median execution latency:
+Performance was benchmarked under strictly controlled reproducible conditions using a synthetic composite test signal (440 Hz fundamental + 1200 Hz harmonic with 10 dB target WGN, $f_s = 44,100\text{ Hz}$). Benchmarks were conducted over **30 repetitions** with **5 warm-up iterations**, reporting the exact median execution latency and standard deviation from `scripts/benchmark_performance.py`:
 
-| Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1.0 s** | 44,100 | 3.15 ms | 1.44 ms | 1.01 ms | 0.55 ms | 2.54 ms | 1.75 ms | **3.13x** | **2.61x** |
-| **5.0 s** | 220,500 | 18.22 ms | 9.00 ms | 6.17 ms | 3.06 ms | 14.81 ms | 14.83 ms | **2.95x** | **2.94x** |
-| **30.0 s** | 1,323,000 | 103.11 ms | 53.45 ms | 35.14 ms | 18.58 ms | 105.58 ms | 97.38 ms | **2.93x** | **2.88x** |
-| **60.0 s** | 2,646,000 | 214.47 ms | 112.04 ms | 69.05 ms | 35.82 ms | 202.63 ms | 183.90 ms | **3.11x** | **3.13x** |
+| Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1.0 s** | 44,100 | 3.67 ± 0.58 ms | 4.13 ± 5.48 ms | 1.13 ± 0.44 ms | 1.04 ± 0.63 ms | **3.25x** | **3.97x** |
+| **5.0 s** | 220,500 | 27.08 ± 7.65 ms | 18.86 ± 11.21 ms | 7.38 ± 3.08 ms | 5.36 ± 0.50 ms | **3.67x** | **3.52x** |
+| **30.0 s** | 1,323,000 | 146.15 ± 19.08 ms | 75.90 ± 36.83 ms | 43.64 ± 4.44 ms | 24.58 ± 5.99 ms | **3.35x** | **3.09x** |
+| **60.0 s** | 2,646,000 | 257.47 ± 41.23 ms | 150.77 ± 29.79 ms | 89.34 ± 41.63 ms | 49.23 ± 6.57 ms | **2.88x** | **3.06x** |
 
 ### Engineering Observations & Complexity Analysis:
-- **Configuration Specificity:** These results evaluate a specific architectural pairing: a 101-tap Type-I windowed FIR filter versus a 4th-order (2-section) Butterworth IIR filter. They demonstrate the computational efficiency of low-order IIR recursion compared to high-tap FIR convolution, but do not imply that every IIR filter is universally faster than every FIR filter under all design specifications.
+- **Configuration Specificity:** These results evaluate a specific architectural pairing: a 101-tap Type-I windowed FIR filter versus a 4th-order (2-section) Butterworth IIR filter. They demonstrate the computational efficiency of low-order IIR recursion compared to high-tap FIR convolution, but do not imply that every IIR filter is universally faster than every FIR filter under all design specifications. Filter benchmarks isolate direct convolution (`scipy.signal.lfilter`/`filtfilt`) versus SOS recursion (`sosfilt`/`sosfiltfilt`).
 - **Observed Scaling:** Across the four tested sample sizes ($N = 44.1\text{k}$ to $2.65\text{M}$ samples), execution time scales in close proportion to signal length $N$.
-- **Real-Time Factor:** For all tested durations, processing latency is orders of magnitude lower than audio duration (e.g., 60 seconds of audio is filtered in ~112 ms causally by FIR and ~36 ms by IIR).
+- **Real-Time Factor:** For all tested durations, processing latency is orders of magnitude lower than audio duration (e.g., 60 seconds of audio is filtered in ~151 ms causally by FIR and ~49 ms by IIR).
 
 ---
 
@@ -143,7 +143,7 @@ Performance was benchmarked under strictly controlled reproducible conditions us
 - **Defect 3 (Technical Descriptions):** Clarified offline non-causal nature of `filtfilt`, exact linear-phase group delay of causal FIR, and distinct character of narrowband IIR notch filters.
 - **Defect 4 (Short Audio in STFT):** Segment length (`nperseg`) dynamically constrained to signal length, preventing crashes on short audio.
 - **Defect 5 (Workflow Provenance):** Ensured degraded audio uploaded in Workflow B is never treated as clean ground truth when switching to Workflow A.
-- **Defect 6 (External Reference Lifecycle):** References strictly bound to primary recording hash, detached on primary change/removal, and cleared upon invalid upload or uploader removal.
+- **Defect 6 (External Reference Lifecycle & Widget Invalidation):** References strictly bound to primary recording hash (`ref_primary_hash`), detached on primary change/removal, and cleared upon invalid upload or uploader removal. Uploader widget state invalidation enforced via dynamic keys (`ref_uploader_v{version}`) and state popping upon primary replacement, removal, and workflow switching, preventing silent reattachment of previously uploaded references.
 - **Defect 7 (Safe Speedup Formatting):** Handled None/non-finite/non-positive speedup ratio safely without TypeError.
 
 ---
@@ -157,6 +157,6 @@ Performance was benchmarked under strictly controlled reproducible conditions us
 
 ## 9. Phase 5 Exit Gate Verdict
 **STATUS: PASSED (COMPLETE)**
-- All 149 tests passing cleanly at 100%.
+- All 150 tests passing cleanly at 100%.
 - Streamlit application launches and operates without exceptions.
 - Mathematical validation, reproducible 30-trial performance benchmarking (`scripts/benchmark_performance.py`), and defect remediation verified.

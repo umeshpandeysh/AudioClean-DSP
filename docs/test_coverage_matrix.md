@@ -1,7 +1,7 @@
 # AudioClean DSP — Comprehensive Test Coverage Traceability Matrix
 
 ## Matrix Overview
-This matrix provides complete traceability between system components, test types, test scenarios, expected engineering behaviors, actual test outputs, and validation status across all 149 tests in the test suite.
+This matrix provides complete traceability between system components, test types, test scenarios, expected engineering behaviors, actual test outputs, and validation status across all 150 tests in the test suite.
 
 | Component | Test File | Test Type | Test Scenario | Expected Behavior | Actual Result | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -54,6 +54,7 @@ This matrix provides complete traceability between system components, test types
 | **Application UI** | `test_app.py` | App Contract | Reference lifecycle: uploader clear | Resets reference state to None when uploader is cleared | Reference cleared cleanly | **PASS** |
 | **Application UI** | `test_app.py` | App Contract | Reference lifecycle: same-shape change | Detects hash mismatch across same-shape primary replacements | Prevents stale reference link | **PASS** |
 | **Application UI** | `test_app.py` | App Contract | Reference lifecycle: rejected upload | Clears prior reference state when newly uploaded reference fails validation | No lingering stale state | **PASS** |
+| **Application UI** | `test_app.py` | Unit | Uploader lifecycle reset helpers | Dynamic key version increment and session state popping | Invalidates cached widget state | **PASS** |
 | **Application UI** | `test_app.py` | AppTest Interaction| Workflow toggle | Programmatically switches between Workflow A and B via AppTest | State matches mode cleanly | **PASS** |
 | **Application UI** | `test_app.py` | AppTest Interaction| Workspace navigation | Navigates across all six workspaces without uncaught exceptions | Zero runtime errors | **PASS** |
 | **Application UI** | Headless smoke run | System / Manual | Streamlit app launch | Launches cleanly without import/syntax errors | Zero startup errors | **PASS** |

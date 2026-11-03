@@ -11,6 +11,8 @@ from app import (
     validate_reference_match,
     apply_linked_normalization,
     format_speedup,
+    reset_reference_uploader,
+    reset_primary_uploader,
 )
 
 
@@ -154,129 +156,233 @@ def test_format_speedup_non_finite_and_negative():
     assert format_speedup("invalid") == "N/A"
 
 
-def test_workflow_transition_provenance_preservation():
-    """Verify that switching between Workflow A and B strictly preserves data provenance.
-
-    Switching from Workflow B to Workflow A must NOT treat degraded audio as clean ground truth.
-    """
-    # 1. Synthetic demo tone in Workflow A
-    source_type = "synthetic"
-    audio_data = np.ones(1000)
-
-    # Toggle to Workflow B
-    ref_audio_b = None  # Workflow B clears ground-truth reference
-    assert ref_audio_b is None
-
-    # Toggle back to Workflow A with synthetic provenance
-    ref_audio_restored = audio_data.copy() if source_type in ("synthetic", "clean_upload") else None
-    assert ref_audio_restored is not None
-
-    # 2. Real-world degraded upload in Workflow B
-    source_type = "noisy_upload"
-    degraded_audio = np.random.randn(1000)
-    audio_data = degraded_audio
-
-    # User toggles to Workflow A while degraded recording is loaded
-    ref_audio_a = audio_data.copy() if source_type in ("synthetic", "clean_upload") else None
-    # Must NOT copy degraded audio to reference_audio!
-    assert ref_audio_a is None
+def make_test_wav_bytes(freq: float = 440.0, sr: int = 44100, duration: float = 0.1) -> bytes:
+    """Helper to generate valid in-memory PCM_16 WAV bytes for test uploads."""
+    t = np.linspace(0.0, duration, int(sr * duration), endpoint=False)
+    data = 0.5 * np.sin(2.0 * np.pi * freq * t)
+    buf = io.BytesIO()
+    sf.write(buf, data, sr, format="WAV", subtype="PCM_16")
+    return buf.getvalue()
 
 
-def test_reference_lifecycle_primary_replacement():
-    """Verify that replacing primary recording detaches any attached external reference."""
-    prim_1 = np.ones(1000, dtype=np.float64)
-    prim_2 = np.ones(2000, dtype=np.float64)
-    ref = np.ones(1000, dtype=np.float64)
+def test_apptest_reference_detached_on_same_shape_primary_replacement():
+    """Requirement 2: Replace primary A with primary B (same shape/sr) and verify reference A detaches and cannot silently reattach."""
+    from pathlib import Path
+    app_path = Path(__file__).parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=15)
+    at.run()
 
-    h_prim_1 = compute_file_hash(prim_1.tobytes())
-    h_prim_2 = compute_file_hash(prim_2.tobytes())
-    h_ref = compute_file_hash(ref.tobytes())
+    # 1. Switch to Workflow B
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[1])
+            break
+    at.run()
+    assert not at.exception
 
-    # Reference attached to prim_1
-    ref_file_hash = h_ref
-    ref_primary_hash = h_prim_1
-    reference_audio = ref
+    # 2. Upload primary A (440 Hz) and reference A (440 Hz)
+    wav_prim_a = make_test_wav_bytes(freq=440.0)
+    wav_prim_b = make_test_wav_bytes(freq=880.0)  # Identical shape & sr, different samples
+    wav_ref_a = make_test_wav_bytes(freq=440.0)
 
-    # Primary replaced with prim_2
-    if h_prim_2 != h_prim_1:
-        reference_audio = None
-        ref_file_hash = None
-        ref_primary_hash = None
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("primary_a.wav", wav_prim_a)
+    at.run()
+    assert not at.exception
 
-    assert reference_audio is None
-    assert ref_file_hash is None
-    assert ref_primary_hash is None
+    ru = [f for f in at.file_uploader if "Reference" in f.label][0]
+    ru.upload("ref_a.wav", wav_ref_a)
+    at.run()
+    assert not at.exception
+    assert at.session_state.reference_audio is not None
+    assert at.session_state.ref_file_hash is not None
 
+    # 3. Replace primary A with primary B (same shape, same sr)
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("primary_b.wav", wav_prim_b)
+    at.run()
+    assert not at.exception
 
-def test_reference_lifecycle_uploader_cleared():
-    """Verify that clearing the reference uploader resets reference state to None."""
-    ref_audio = np.ones(1000)
-    ref_file_hash = "abc123hash"
-    ref_primary_hash = "prim123hash"
+    # 4. Verify reference A is detached and cleared
+    assert at.session_state.reference_audio is None
+    assert at.session_state.ref_file_hash is None
+    assert at.session_state.ref_primary_hash is None
 
-    # User removes uploaded reference file (ref_file is None)
-    ref_file = None
-    if ref_file is None and ref_file_hash is not None:
-        ref_audio = None
-        ref_file_hash = None
-        ref_primary_hash = None
-
-    assert ref_audio is None
-    assert ref_file_hash is None
-    assert ref_primary_hash is None
-
-
-def test_reference_lifecycle_same_shape_hash_invalidation():
-    """Verify hash-based reference invalidation when two distinct recordings share identical shape."""
-    sr = 44100
-    t = np.linspace(0, 1.0, sr, endpoint=False)
-    prim_rec_1 = 0.5 * np.sin(2 * np.pi * 440 * t)
-    prim_rec_2 = 0.5 * np.cos(2 * np.pi * 880 * t)
-    ref_rec = 0.5 * np.sin(2 * np.pi * 440 * t)
-
-    h1 = compute_file_hash(prim_rec_1.tobytes())
-    h2 = compute_file_hash(prim_rec_2.tobytes())
-    assert h1 != h2
-    assert prim_rec_1.shape == prim_rec_2.shape
-
-    # Reference attached for recording 1
-    ref_primary_hash = h1
-    ref_file_hash = compute_file_hash(ref_rec.tobytes())
-    reference_audio = ref_rec
-
-    # Primary replaced with recording 2 (same shape!)
-    current_primary_hash = h2
-    if ref_primary_hash != current_primary_hash:
-        reference_audio = None
-        ref_file_hash = None
-        ref_primary_hash = None
-
-    assert reference_audio is None
-    assert ref_file_hash is None
-    assert ref_primary_hash is None
+    # 5. Verify reference A cannot silently reattach on a subsequent rerun
+    at.run()
+    assert not at.exception
+    assert at.session_state.reference_audio is None
+    assert at.session_state.ref_file_hash is None
 
 
-def test_reference_lifecycle_rejected_reference_clears_prior_state():
-    """Verify that uploading an invalid reference clears any prior reference instead of retaining it."""
-    # Prior state had a valid reference
-    ref_audio = np.ones(1000)
-    ref_file_hash = "valid_prior_ref_hash"
-    ref_primary_hash = "prim_hash"
+def test_apptest_reference_removal_persists_across_reruns():
+    """Requirement 2: Remove the reference uploader and verify it stays removed after rerun."""
+    from pathlib import Path
+    app_path = Path(__file__).parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=15)
+    at.run()
 
-    # New reference upload with non-finite values
-    invalid_new_ref = np.array([1.0, np.nan, 0.5])
-    valid, msg = validate_reference_match(invalid_new_ref, 44100, np.ones(3), 44100)
-    assert valid is False
+    # Switch to Workflow B
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[1])
+            break
+    at.run()
 
-    # Handling logic must reset prior state to None
-    if not valid:
-        ref_audio = None
-        ref_file_hash = None
-        ref_primary_hash = None
+    # Upload primary and reference
+    wav_prim = make_test_wav_bytes(freq=440.0)
+    wav_ref = make_test_wav_bytes(freq=440.0)
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("primary.wav", wav_prim)
+    at.run()
 
-    assert ref_audio is None
-    assert ref_file_hash is None
-    assert ref_primary_hash is None
+    ru = [f for f in at.file_uploader if "Reference" in f.label][0]
+    ru.upload("ref.wav", wav_ref)
+    at.run()
+    assert at.session_state.reference_audio is not None
+
+    # User removes reference uploader
+    ru = [f for f in at.file_uploader if "Reference" in f.label][0]
+    ru.set_value(None)
+    at.run()
+    assert not at.exception
+    assert at.session_state.reference_audio is None
+    assert at.session_state.ref_file_hash is None
+
+    # Rerun again to confirm it stays removed and does not resurrect
+    at.run()
+    assert not at.exception
+    assert at.session_state.reference_audio is None
+
+
+def test_apptest_workflow_b_to_a_degraded_audio_no_reference():
+    """Requirement 2: Switch Workflow B -> Workflow A after uploading degraded audio and verify no ground-truth reference is created."""
+    from pathlib import Path
+    app_path = Path(__file__).parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=15)
+    at.run()
+
+    # Switch to Workflow B
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[1])
+            break
+    at.run()
+
+    # Upload real-world degraded audio
+    wav_deg = make_test_wav_bytes(freq=300.0)
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("degraded.wav", wav_deg)
+    at.run()
+    assert at.session_state.source_type == "noisy_upload"
+    assert at.session_state.reference_audio is None
+
+    # Switch to Workflow A
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[0])
+            break
+    at.run()
+    assert not at.exception
+    assert at.session_state.active_ingest_mode == "Workflow A"
+    # Ground-truth reference MUST remain None
+    assert at.session_state.reference_audio is None
+
+
+def test_apptest_workflow_switch_after_primary_change_no_leakage():
+    """Requirement 2: Switch workflows after changing the primary recording and verify old reference state cannot return."""
+    from pathlib import Path
+    app_path = Path(__file__).parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=15)
+    at.run()
+
+    # Switch to Workflow B
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[1])
+            break
+    at.run()
+
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("prim1.wav", make_test_wav_bytes(freq=440.0))
+    at.run()
+
+    ru = [f for f in at.file_uploader if "Reference" in f.label][0]
+    ru.upload("ref1.wav", make_test_wav_bytes(freq=440.0))
+    at.run()
+    assert at.session_state.reference_audio is not None
+
+    # Change primary recording
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("prim2.wav", make_test_wav_bytes(freq=660.0))
+    at.run()
+    assert at.session_state.reference_audio is None
+
+    # Switch to Workflow A
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[0])
+            break
+    at.run()
+    assert at.session_state.reference_audio is None
+
+    # Switch back to Workflow B
+    for r in at.radio:
+        if "Ingestion Workflow" in r.label:
+            r.set_value(r.options[1])
+            break
+    at.run()
+    assert not at.exception
+    assert at.session_state.reference_audio is None
+
+
+def test_apptest_primary_removal_resets_reference_and_restores_demo():
+    """Verify that removing primary upload invalidates reference uploader and restores demo signal."""
+    from pathlib import Path
+    app_path = Path(__file__).parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=15)
+    at.run()
+
+    # Upload primary
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.upload("custom.wav", make_test_wav_bytes(freq=550.0))
+    at.run()
+    assert at.session_state.source_type == "clean_upload"
+    assert at.session_state.primary_file_hash is not None
+
+    # Clear primary upload
+    pu = [f for f in at.file_uploader if "Audio Recording" in f.label][0]
+    pu.set_value(None)
+    at.run()
+    assert not at.exception
+    assert at.session_state.source_type == "synthetic"
+    assert at.session_state.primary_file_hash is None
+
+
+def test_uploader_lifecycle_reset_helpers():
+    """Verify reset_reference_uploader and reset_primary_uploader helper functions."""
+    import streamlit as st
+    st.session_state.reference_audio = np.ones(10)
+    st.session_state.ref_file_hash = "hash_123"
+    st.session_state.ref_primary_hash = "prim_hash"
+    st.session_state.ref_uploader_version = 0
+    st.session_state["ref_uploader_v0"] = "mock_file"
+
+    reset_reference_uploader()
+    assert st.session_state.reference_audio is None
+    assert st.session_state.ref_file_hash is None
+    assert st.session_state.ref_primary_hash is None
+    assert "ref_uploader_v0" not in st.session_state
+    assert st.session_state.ref_uploader_version == 1
+
+    st.session_state.primary_uploader_version = 0
+    st.session_state.primary_file_hash = "prim_hash"
+    st.session_state["primary_audio_uploader_v0"] = "mock_prim"
+
+    reset_primary_uploader()
+    assert st.session_state.primary_file_hash is None
+    assert "primary_audio_uploader_v0" not in st.session_state
+    assert st.session_state.primary_uploader_version == 1
 
 
 def test_streamlit_apptest_workflow_toggle():
