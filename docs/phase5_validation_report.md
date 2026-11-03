@@ -65,6 +65,22 @@ The test suite was executed using:
 
 ---
 
+### 3.1 Cross-Version Continuous Integration Verification (November 2026)
+
+The repository now contains a GitHub Actions workflow (`.github/workflows/ci.yml`) that executes on pushes to `main`, pull requests, and manual dispatch. Each job installs the declared dependencies, runs Python compilation for `app.py src tests scripts`, and executes the complete pytest suite.
+
+| Environment | Compile step | Test result |
+| :--- | :---: | :---: |
+| Ubuntu / Python 3.10 | PASS | 150 passed |
+| Ubuntu / Python 3.12 | PASS | 150 passed |
+| Ubuntu / Python 3.13 | PASS | 150 passed |
+
+**Run:** [GitHub Actions 41579919481](https://github.com/umeshpandeysh/AudioClean-DSP/actions/runs/41579919481)  
+**Validated commit:** `2c07e4e2221bbac59305510f0de2a30a600ddb66`  
+**Conclusion:** All 3 matrix jobs succeeded; 450 total test executions passed (150 tests per Python version).
+
+Python 3.11 is listed as an installation-compatible version but is not currently included in this CI matrix. CI confirms compilation and automated tests; it does not confirm live Streamlit hosting or manual visual/browser testing.
+
 ## 4. DSP Mathematical Validation
 
 | Module | Verification Target | Tested Behavior | Result |
@@ -118,6 +134,17 @@ The application (`app.py`) was verified using interactive `streamlit.testing.v1.
 - STFT segment length dynamically adapts to input signal length, preventing crashes on short signals.
 
 ---
+
+## 8. UI/UX Maintenance and Regression Fixes (November 2026)
+
+The application presentation layer was updated with a consistent light theme, refined header and sidebar, workspace cards/panels, standardized DSP plot styling, a four-stage workflow navigator, a capability ribbon, restrained CSS motion/hover feedback, reduced-motion support, and responsive narrow-screen layout rules.
+
+During screenshot-driven regression work, the following application defects were corrected:
+- Separated a malformed reference-removal notification and rerun statement.
+- Corrected indentation in the time-domain waveform and STFT display paths.
+- Replaced invalid `eval_res.mae` accesses with the actual `input_mae` and `output_mae` fields in FIR/IIR result presentation.
+
+These changes do not intentionally alter the DSP algorithms or metric calculations. Their compilation and existing automated regression coverage are included in the successful cross-version CI run above. Manual acceptance testing of the live Streamlit app remains a separate activity.
 
 ## 6. Performance & Resource Benchmarking
 
