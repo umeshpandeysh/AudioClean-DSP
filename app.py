@@ -66,7 +66,22 @@ st.markdown(
     .ac-status-note {font-size:.7rem;color:#8491a3;margin-top:.12rem;}
     .main-title {font-size:clamp(1.45rem,2.2vw,1.85rem);line-height:1.2;font-weight:800;letter-spacing:-.045em;color:#14243b;margin:1.15rem 0 .28rem;}
     .sub-title {font-size:.91rem;line-height:1.6;color:var(--ac-muted);margin:0 0 1.3rem;max-width:900px;}
-    [data-testid="stMetric"] {background:#fff;border:1px solid var(--ac-line);padding:.8rem .95rem;border-radius:13px;box-shadow:0 3px 12px rgba(20,40,70,.025);}
+    [data-testid="stVerticalBlockBorderWrapper"] {
+      background:#ffffff;
+      border:1px solid #e3eaf3;
+      border-radius:15px;
+      box-shadow:0 5px 18px rgba(20,40,70,.035);
+      padding:1rem 1.05rem;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {gap:.8rem;}
+    [data-testid="stSelectbox"],[data-testid="stSlider"],[data-testid="stNumberInput"],
+    [data-testid="stRadio"],[data-testid="stCheckbox"] {margin-bottom:.18rem;}
+    [data-testid="stSelectbox"] label,[data-testid="stSlider"] label,
+    [data-testid="stNumberInput"] label,[data-testid="stRadio"] label {
+      font-weight:650;color:#34445c;
+    }
+    [data-testid="stPlotlyChart"],[data-testid="stImage"] {border-radius:11px;}
+        [data-testid="stMetric"] {background:#fff;border:1px solid var(--ac-line);padding:.8rem .95rem;border-radius:13px;box-shadow:0 3px 12px rgba(20,40,70,.025);}
     [data-testid="stMetricLabel"] {color:#718096;font-size:.72rem;font-weight:700;}
     [data-testid="stMetricValue"] {color:#17263c;font-weight:800;letter-spacing:-.035em;}
     section[data-testid="stSidebar"] {background:linear-gradient(180deg,#101e33 0%,#172d49 100%);border-right:1px solid rgba(255,255,255,.08);}
@@ -622,128 +637,129 @@ elif workspace.startswith("2"):
         ref = st.session_state.reference_audio
         sr = st.session_state.sample_rate
 
-        col_ctrl, col_view = st.columns([1.1, 1.2])
+        with st.container(border=True):
+            col_ctrl, col_view = st.columns([1.1, 1.2])
 
-        with col_ctrl:
-            st.subheader("Noise Model Configuration")
-            noise_type = st.selectbox(
-                "Select Noise Model:",
-                [
-                    "White Gaussian Noise (WGN)",
-                    "Sinusoidal Mains Hum (50/60 Hz)",
-                    "High-Frequency Interference Tone",
-                    "Composite Noise (Combined Hum + WGN + Tone)",
-                ],
-            )
+            with col_ctrl:
+                st.subheader("Noise Model Configuration")
+                noise_type = st.selectbox(
+                    "Select Noise Model:",
+                    [
+                        "White Gaussian Noise (WGN)",
+                        "Sinusoidal Mains Hum (50/60 Hz)",
+                        "High-Frequency Interference Tone",
+                        "Composite Noise (Combined Hum + WGN + Tone)",
+                    ],
+                )
 
-            if noise_type == "White Gaussian Noise (WGN)":
-                target_snr = st.slider("Target SNR (dB):", min_value=-10.0, max_value=40.0, value=10.0, step=0.5)
-                seed_val = st.number_input("Random Seed (optional):", min_value=0, max_value=999999, value=42)
+                if noise_type == "White Gaussian Noise (WGN)":
+                    target_snr = st.slider("Target SNR (dB):", min_value=-10.0, max_value=40.0, value=10.0, step=0.5)
+                    seed_val = st.number_input("Random Seed (optional):", min_value=0, max_value=999999, value=42)
 
-                if st.button("Synthesize and Apply WGN", type="primary", use_container_width=True):
-                    noisy, noise = noise_mod.add_white_gaussian_noise(ref, target_snr_db=target_snr, seed=int(seed_val))
-                    st.session_state.noisy_audio = noisy
-                    st.session_state.noise_component = noise
-                    st.success(f"Synthesized WGN at {target_snr:.1f} dB SNR.")
+                    if st.button("Synthesize and Apply WGN", type="primary", use_container_width=True):
+                        noisy, noise = noise_mod.add_white_gaussian_noise(ref, target_snr_db=target_snr, seed=int(seed_val))
+                        st.session_state.noisy_audio = noisy
+                        st.session_state.noise_component = noise
+                        st.success(f"Synthesized WGN at {target_snr:.1f} dB SNR.")
 
-            elif noise_type == "Sinusoidal Mains Hum (50/60 Hz)":
-                hum_freq = st.selectbox("Fundamental Hum Frequency:", [50.0, 60.0], index=0)
-                hum_amp = st.slider("Hum Amplitude (relative):", min_value=0.01, max_value=0.5, value=0.15, step=0.01)
-                include_harmonics = st.checkbox("Include Harmonics (2nd, 3rd, 4th)", value=True)
-                harmonics = [2, 3, 4] if include_harmonics else []
-                decay = st.slider("Harmonic Decay Factor:", min_value=0.1, max_value=0.9, value=0.5, step=0.05)
+                elif noise_type == "Sinusoidal Mains Hum (50/60 Hz)":
+                    hum_freq = st.selectbox("Fundamental Hum Frequency:", [50.0, 60.0], index=0)
+                    hum_amp = st.slider("Hum Amplitude (relative):", min_value=0.01, max_value=0.5, value=0.15, step=0.01)
+                    include_harmonics = st.checkbox("Include Harmonics (2nd, 3rd, 4th)", value=True)
+                    harmonics = [2, 3, 4] if include_harmonics else []
+                    decay = st.slider("Harmonic Decay Factor:", min_value=0.1, max_value=0.9, value=0.5, step=0.05)
 
-                if st.button("Synthesize and Apply Mains Hum", type="primary", use_container_width=True):
-                    noisy, noise = noise_mod.add_sinusoidal_hum(
-                        ref, sample_rate=sr, freq=hum_freq, amplitude=hum_amp, harmonics=harmonics, harmonic_decay=decay
+                    if st.button("Synthesize and Apply Mains Hum", type="primary", use_container_width=True):
+                        noisy, noise = noise_mod.add_sinusoidal_hum(
+                            ref, sample_rate=sr, freq=hum_freq, amplitude=hum_amp, harmonics=harmonics, harmonic_decay=decay
+                        )
+                        st.session_state.noisy_audio = noisy
+                        st.session_state.noise_component = noise
+                        st.success(f"Synthesized {hum_freq:.0f} Hz hum with amplitude {hum_amp:.2f}.")
+
+                elif noise_type == "High-Frequency Interference Tone":
+                    max_allowable_f = float(sr // 2 - 100)
+                    tone_freq = st.slider(
+                        "Interference Frequency (Hz):",
+                        min_value=1000.0,
+                        max_value=max_allowable_f,
+                        value=min(6000.0, max_allowable_f * 0.75),
+                        step=100.0,
                     )
-                    st.session_state.noisy_audio = noisy
-                    st.session_state.noise_component = noise
-                    st.success(f"Synthesized {hum_freq:.0f} Hz hum with amplitude {hum_amp:.2f}.")
+                    tone_amp = st.slider("Tone Amplitude:", min_value=0.01, max_value=0.5, value=0.12, step=0.01)
 
-            elif noise_type == "High-Frequency Interference Tone":
-                max_allowable_f = float(sr // 2 - 100)
-                tone_freq = st.slider(
-                    "Interference Frequency (Hz):",
-                    min_value=1000.0,
-                    max_value=max_allowable_f,
-                    value=min(6000.0, max_allowable_f * 0.75),
-                    step=100.0,
-                )
-                tone_amp = st.slider("Tone Amplitude:", min_value=0.01, max_value=0.5, value=0.12, step=0.01)
+                    if st.button("Synthesize and Apply HF Tone", type="primary", use_container_width=True):
+                        noisy, noise = noise_mod.add_high_frequency_noise(ref, sample_rate=sr, freq=tone_freq, amplitude=tone_amp)
+                        st.session_state.noisy_audio = noisy
+                        st.session_state.noise_component = noise
+                        st.success(f"Synthesized {tone_freq:.0f} Hz interference tone.")
 
-                if st.button("Synthesize and Apply HF Tone", type="primary", use_container_width=True):
-                    noisy, noise = noise_mod.add_high_frequency_noise(ref, sample_rate=sr, freq=tone_freq, amplitude=tone_amp)
-                    st.session_state.noisy_audio = noisy
-                    st.session_state.noise_component = noise
-                    st.success(f"Synthesized {tone_freq:.0f} Hz interference tone.")
+                elif noise_type == "Composite Noise (Combined Hum + WGN + Tone)":
+                    st.caption("Combine multiple isolated degradation components via add_noise_combination().")
+                    wgn_snr = st.slider("WGN Component SNR (dB):", -5.0, 30.0, 15.0, 0.5)
+                    hum_f = st.selectbox("Hum Component Frequency:", [50.0, 60.0], 0)
+                    hum_a = st.slider("Hum Component Amplitude:", 0.01, 0.3, 0.1, 0.01)
+                    tone_f = st.slider("HF Tone Frequency (Hz):", 1000.0, float(sr // 2 - 200), 5000.0, 100.0)
+                    tone_a = st.slider("HF Tone Amplitude:", 0.01, 0.3, 0.08, 0.01)
 
-            elif noise_type == "Composite Noise (Combined Hum + WGN + Tone)":
-                st.caption("Combine multiple isolated degradation components via add_noise_combination().")
-                wgn_snr = st.slider("WGN Component SNR (dB):", -5.0, 30.0, 15.0, 0.5)
-                hum_f = st.selectbox("Hum Component Frequency:", [50.0, 60.0], 0)
-                hum_a = st.slider("Hum Component Amplitude:", 0.01, 0.3, 0.1, 0.01)
-                tone_f = st.slider("HF Tone Frequency (Hz):", 1000.0, float(sr // 2 - 200), 5000.0, 100.0)
-                tone_a = st.slider("HF Tone Amplitude:", 0.01, 0.3, 0.08, 0.01)
+                    if st.button("Synthesize and Apply Composite Noise", type="primary", use_container_width=True):
+                        _, n_wgn = noise_mod.add_white_gaussian_noise(ref, target_snr_db=wgn_snr, seed=123)
+                        _, n_hum = noise_mod.add_sinusoidal_hum(ref, sr, freq=hum_f, amplitude=hum_a, harmonics=[2, 3])
+                        _, n_tone = noise_mod.add_high_frequency_noise(ref, sr, freq=tone_f, amplitude=tone_a)
 
-                if st.button("Synthesize and Apply Composite Noise", type="primary", use_container_width=True):
-                    _, n_wgn = noise_mod.add_white_gaussian_noise(ref, target_snr_db=wgn_snr, seed=123)
-                    _, n_hum = noise_mod.add_sinusoidal_hum(ref, sr, freq=hum_f, amplitude=hum_a, harmonics=[2, 3])
-                    _, n_tone = noise_mod.add_high_frequency_noise(ref, sr, freq=tone_f, amplitude=tone_a)
+                        noisy, comp_noise = noise_mod.add_noise_combination(ref, [n_wgn, n_hum, n_tone], prevent_clipping=True)
+                        st.session_state.noisy_audio = noisy
+                        st.session_state.noise_component = comp_noise
+                        st.success("Synthesized and combined 3 noise components safely.")
 
-                    noisy, comp_noise = noise_mod.add_noise_combination(ref, [n_wgn, n_hum, n_tone], prevent_clipping=True)
-                    st.session_state.noisy_audio = noisy
-                    st.session_state.noise_component = comp_noise
-                    st.success("Synthesized and combined 3 noise components safely.")
+                st.markdown("---")
+                if st.button("Reset Working Signal to Clean Reference", use_container_width=True):
+                    st.session_state.noisy_audio = ref.copy()
+                    st.session_state.noise_component = None
+                    st.info("Working signal reset to clean reference.")
+                    st.rerun()
 
-            st.markdown("---")
-            if st.button("Reset Working Signal to Clean Reference", use_container_width=True):
-                st.session_state.noisy_audio = ref.copy()
-                st.session_state.noise_component = None
-                st.info("Working signal reset to clean reference.")
-                st.rerun()
+            with col_view:
+                st.subheader("Spectral and Auditory Inspection")
+                if st.session_state.noisy_audio is not None:
+                    noisy_sig = st.session_state.noisy_audio
+                    cur_snr = metrics_mod.calculate_snr(ref, noisy_sig)
+                    cur_rmse = metrics_mod.calculate_rmse(ref, noisy_sig)
 
-        with col_view:
-            st.subheader("Spectral and Auditory Inspection")
-            if st.session_state.noisy_audio is not None:
-                noisy_sig = st.session_state.noisy_audio
-                cur_snr = metrics_mod.calculate_snr(ref, noisy_sig)
-                cur_rmse = metrics_mod.calculate_rmse(ref, noisy_sig)
+                    st.markdown(
+                        f"<div class='metric-badge'>"
+                        f"<b>Baseline SNR:</b> {cur_snr:.2f} dB &nbsp;|&nbsp; "
+                        f"<b>Baseline RMSE:</b> {cur_rmse:.4f}"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
 
-                st.markdown(
-                    f"<div class='metric-badge'>"
-                    f"<b>Baseline SNR:</b> {cur_snr:.2f} dB &nbsp;|&nbsp; "
-                    f"<b>Baseline RMSE:</b> {cur_rmse:.4f}"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
+                    st.markdown("**Clean Audio:**")
+                    render_audio_player(ref, sr, "Clean Reference")
 
-                st.markdown("**Clean Audio:**")
-                render_audio_player(ref, sr, "Clean Reference")
+                    st.markdown("**Degraded Working Audio:**")
+                    render_audio_player(noisy_sig, sr, "Noisy Signal")
 
-                st.markdown("**Degraded Working Audio:**")
-                render_audio_player(noisy_sig, sr, "Noisy Signal")
+                    if st.session_state.noise_component is not None:
+                        st.markdown("**Isolated Noise Component:**")
+                        render_audio_player(st.session_state.noise_component, sr, "Noise Only")
 
-                if st.session_state.noise_component is not None:
-                    st.markdown("**Isolated Noise Component:**")
-                    render_audio_player(st.session_state.noise_component, sr, "Noise Only")
+                    # FFT comparison
+                    f_ref, mag_ref, _ = fft_mod.compute_fft(ref, sr)
+                    f_noi, mag_noi, _ = fft_mod.compute_fft(noisy_sig, sr)
 
-                # FFT comparison
-                f_ref, mag_ref, _ = fft_mod.compute_fft(ref, sr)
-                f_noi, mag_noi, _ = fft_mod.compute_fft(noisy_sig, sr)
-
-                fig, ax = plt.subplots(figsize=(8, 4))
-                ax.plot(f_noi, 20 * np.log10(np.maximum(mag_noi, 1e-12)), label="Noisy Signal", color="#e74c3c", alpha=0.7)
-                ax.plot(f_ref, 20 * np.log10(np.maximum(mag_ref, 1e-12)), label="Clean Reference", color="#2ecc71", alpha=0.85)
-                ax.set_title("FFT Magnitude Comparison: Clean vs. Noisy")
-                ax.set_xlabel("Frequency (Hz)")
-                ax.set_ylabel("Magnitude (dBFS)")
-                ax.set_xlim(0, min(sr // 2, 10000))
-                ax.grid(True, alpha=0.3)
-                ax.legend()
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                    fig, ax = plt.subplots(figsize=(8, 4))
+                    ax.plot(f_noi, 20 * np.log10(np.maximum(mag_noi, 1e-12)), label="Noisy Signal", color="#e74c3c", alpha=0.7)
+                    ax.plot(f_ref, 20 * np.log10(np.maximum(mag_ref, 1e-12)), label="Clean Reference", color="#2ecc71", alpha=0.85)
+                    ax.set_title("FFT Magnitude Comparison: Clean vs. Noisy")
+                    ax.set_xlabel("Frequency (Hz)")
+                    ax.set_ylabel("Magnitude (dBFS)")
+                    ax.set_xlim(0, min(sr // 2, 10000))
+                    ax.grid(True, alpha=0.3)
+                    ax.legend()
+                    fig.tight_layout()
+                    st.pyplot(fig)
+                    plt.close(fig)
 
 # =============================================================================
 # WORKSPACE 3: FIR Filter Designer
@@ -763,158 +779,160 @@ elif workspace.startswith("3"):
         sr = st.session_state.sample_rate
         nyq = sr / 2.0
 
-        col_cfg, col_res = st.columns([1.1, 1.2])
+        with st.container(border=True):
+            col_cfg, col_res = st.columns([1.1, 1.2])
 
-        with col_cfg:
-            st.subheader("FIR Design Parameters")
-            f_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
+            with col_cfg:
+                st.subheader("FIR Design Parameters")
+                f_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
 
-            if f_type in ["lowpass", "highpass"]:
-                cutoff = st.slider(
-                    "Cutoff Frequency fc (Hz):",
-                    min_value=20.0,
-                    max_value=float(nyq - 50.0),
-                    value=min(1500.0, nyq * 0.4),
-                    step=20.0,
-                )
-            else:
-                c1, c2 = st.columns(2)
-                with c1:
-                    f_low = st.number_input("Lower Cutoff (Hz):", min_value=20.0, max_value=float(nyq - 100.0), value=300.0, step=20.0)
-                with c2:
-                    f_high = st.number_input("Upper Cutoff (Hz):", min_value=float(f_low + 20.0), max_value=float(nyq - 50.0), value=3000.0, step=20.0)
-                cutoff = [f_low, f_high]
+                if f_type in ["lowpass", "highpass"]:
+                    cutoff = st.slider(
+                        "Cutoff Frequency fc (Hz):",
+                        min_value=20.0,
+                        max_value=float(nyq - 50.0),
+                        value=min(1500.0, nyq * 0.4),
+                        step=20.0,
+                    )
+                else:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        f_low = st.number_input("Lower Cutoff (Hz):", min_value=20.0, max_value=float(nyq - 100.0), value=300.0, step=20.0)
+                    with c2:
+                        f_high = st.number_input("Upper Cutoff (Hz):", min_value=float(f_low + 20.0), max_value=float(nyq - 50.0), value=3000.0, step=20.0)
+                    cutoff = [f_low, f_high]
 
-            numtaps = st.slider(
-                "Filter Length (Taps M - odd for Type I):",
-                min_value=5,
-                max_value=501,
-                value=101,
-                step=2,
-            )
-
-            window_name = st.selectbox("Window Function:", ["hamming", "hann", "blackman"], index=0)
-
-            mode_fir = st.radio(
-                "Filtering Mode:",
-                [
-                    "zero_phase (filtfilt: offline non-causal forward-backward, zero phase shift)",
-                    "causal (lfilter: real-time causal, strictly linear phase, group delay tau = (M-1)/2)",
-                ],
-                index=0,
-            )
-            mode_str = "zero_phase" if "zero_phase" in mode_fir else "causal"
-
-            st.info(
-                "ℹ️ **FIR Cutoff Convention:** Windowed FIR via `firwin` designs to the **-6.02 dB** "
-                "(half-amplitude |H|=0.5) transition midpoint, whereas Butterworth IIR designs to **-3.01 dB** "
-                "(half-power |H|=1/sqrt(2))."
-            )
-
-            try:
-                fir_design = fir_mod.design_fir_filter(
-                    sample_rate=sr,
-                    filter_type=f_type,
-                    cutoff_hz=cutoff,
-                    numtaps=numtaps,
-                    window=window_name,
-                )
-                design_ok = True
-            except Exception as e:
-                st.error(f"FIR Design Error: {e}")
-                design_ok = False
-
-            if design_ok:
-                tau_samples = (fir_design.numtaps - 1) // 2
-                tau_ms = (tau_samples / sr) * 1000.0
-                st.markdown(
-                    f"- **Filter Order N:** `{fir_design.order}` (Taps: `{fir_design.numtaps}`)\n"
-                    f"- **Group Delay tau:** `{tau_samples}` samples (`{tau_ms:.2f} ms`)\n"
-                    f"- **Transition Window:** `{fir_design.window}`"
+                numtaps = st.slider(
+                    "Filter Length (Taps M - odd for Type I):",
+                    min_value=5,
+                    max_value=501,
+                    value=101,
+                    step=2,
                 )
 
-        with col_res:
-            st.subheader("Frequency and Phase Response")
-            if design_ok:
-                w_f, h_mag, h_db, phi = fir_mod.get_fir_frequency_response(fir_design, worN=2048)
+                window_name = st.selectbox("Window Function:", ["hamming", "hann", "blackman"], index=0)
 
-                fig_resp = vis_mod.plot_filter_response(
-                    w_f, h_db, title=f"FIR {f_type.capitalize()} Magnitude Response ({window_name.capitalize()})", cutoff_hz=cutoff
+                mode_fir = st.radio(
+                    "Filtering Mode:",
+                    [
+                        "zero_phase (filtfilt: offline non-causal forward-backward, zero phase shift)",
+                        "causal (lfilter: real-time causal, strictly linear phase, group delay tau = (M-1)/2)",
+                    ],
+                    index=0,
                 )
-                st.pyplot(fig_resp)
-                plt.close(fig_resp)
+                mode_str = "zero_phase" if "zero_phase" in mode_fir else "causal"
 
-                fig_phase = vis_mod.plot_phase_response(
-                    w_f, phi, title=f"FIR {f_type.capitalize()} Phase Response (Linear Phase)"
+                st.info(
+                    "ℹ️ **FIR Cutoff Convention:** Windowed FIR via `firwin` designs to the **-6.02 dB** "
+                    "(half-amplitude |H|=0.5) transition midpoint, whereas Butterworth IIR designs to **-3.01 dB** "
+                    "(half-power |H|=1/sqrt(2))."
                 )
-                st.pyplot(fig_phase)
-                plt.close(fig_phase)
 
-        if design_ok:
-            st.markdown("---")
-            st.subheader("Filtering Execution and Verification")
+                try:
+                    fir_design = fir_mod.design_fir_filter(
+                        sample_rate=sr,
+                        filter_type=f_type,
+                        cutoff_hz=cutoff,
+                        numtaps=numtaps,
+                        window=window_name,
+                    )
+                    design_ok = True
+                except Exception as e:
+                    st.error(f"FIR Design Error: {e}")
+                    design_ok = False
 
-            try:
-                filtered_fir = fir_mod.apply_fir_filter(sig, fir_design, mode=mode_str)
-                apply_ok = True
-            except Exception as e:
-                st.error(f"Filtering execution failed: {e}")
-                apply_ok = False
-
-            if apply_ok:
-                col_aud, col_met = st.columns([1.0, 1.2])
-
-                with col_aud:
-                    st.markdown("**FIR Filtered Audio:**")
-                    render_audio_player(filtered_fir, sr, f"FIR Filtered ({mode_str})")
-                    render_download_button(
-                        filtered_fir, sr, f"fir_filtered_{f_type}_{mode_str}.wav", "Download Filtered WAV"
+                if design_ok:
+                    tau_samples = (fir_design.numtaps - 1) // 2
+                    tau_ms = (tau_samples / sr) * 1000.0
+                    st.markdown(
+                        f"- **Filter Order N:** `{fir_design.order}` (Taps: `{fir_design.numtaps}`)\n"
+                        f"- **Group Delay tau:** `{tau_samples}` samples (`{tau_ms:.2f} ms`)\n"
+                        f"- **Transition Window:** `{fir_design.window}`"
                     )
 
-                with col_met:
-                    if ref is not None:
-                        st.markdown("#### Objective Performance Metrics (Workflow A)")
-                        if mode_str == "causal":
-                            M = fir_design.numtaps
-                            tau = (M - 1) // 2
-                            N = len(ref)
-                            if N > 2 * tau:
-                                eval_ref = ref[tau : N - tau]
-                                eval_noi = sig[tau : N - tau]
-                                eval_fil = filtered_fir[2 * tau : N]
-                                eval_res = metrics_mod.evaluate_audio_quality(eval_ref, eval_noi, eval_fil)
+            with col_res:
+                st.subheader("Frequency and Phase Response")
+                if design_ok:
+                    w_f, h_mag, h_db, phi = fir_mod.get_fir_frequency_response(fir_design, worN=2048)
+
+                    fig_resp = vis_mod.plot_filter_response(
+                        w_f, h_db, title=f"FIR {f_type.capitalize()} Magnitude Response ({window_name.capitalize()})", cutoff_hz=cutoff
+                    )
+                    st.pyplot(fig_resp)
+                    plt.close(fig_resp)
+
+                    fig_phase = vis_mod.plot_phase_response(
+                        w_f, phi, title=f"FIR {f_type.capitalize()} Phase Response (Linear Phase)"
+                    )
+                    st.pyplot(fig_phase)
+                    plt.close(fig_phase)
+
+        with st.container(border=True):
+            if design_ok:
+                st.markdown("---")
+                st.subheader("Filtering Execution and Verification")
+
+                try:
+                    filtered_fir = fir_mod.apply_fir_filter(sig, fir_design, mode=mode_str)
+                    apply_ok = True
+                except Exception as e:
+                    st.error(f"Filtering execution failed: {e}")
+                    apply_ok = False
+
+                if apply_ok:
+                    col_aud, col_met = st.columns([1.0, 1.2])
+
+                    with col_aud:
+                        st.markdown("**FIR Filtered Audio:**")
+                        render_audio_player(filtered_fir, sr, f"FIR Filtered ({mode_str})")
+                        render_download_button(
+                            filtered_fir, sr, f"fir_filtered_{f_type}_{mode_str}.wav", "Download Filtered WAV"
+                        )
+
+                    with col_met:
+                        if ref is not None:
+                            st.markdown("#### Objective Performance Metrics (Workflow A)")
+                            if mode_str == "causal":
+                                M = fir_design.numtaps
+                                tau = (M - 1) // 2
+                                N = len(ref)
+                                if N > 2 * tau:
+                                    eval_ref = ref[tau : N - tau]
+                                    eval_noi = sig[tau : N - tau]
+                                    eval_fil = filtered_fir[2 * tau : N]
+                                    eval_res = metrics_mod.evaluate_audio_quality(eval_ref, eval_noi, eval_fil)
+                                    st.markdown(
+                                        f"- **Evaluation Interval:** Valid middle interval [tau : N - tau] (`{len(eval_ref):,}` samples)\n"
+                                        f"- **Input SNR:** `{eval_res.input_snr_db:.2f} dB` &nbsp;→&nbsp; **Output SNR:** `{eval_res.output_snr_db:.2f} dB`\n"
+                                        f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
+                                        f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
+                                        f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
+                                        f"- **MAE:** `{eval_res.mae:.4f}`"
+                                    )
+                                else:
+                                    st.warning("Signal length is too short to evaluate causal FIR valid interval.")
+                            else:
+                                eval_res = metrics_mod.evaluate_audio_quality(ref, sig, filtered_fir)
                                 st.markdown(
-                                    f"- **Evaluation Interval:** Valid middle interval [tau : N - tau] (`{len(eval_ref):,}` samples)\n"
+                                    f"- **Evaluation Mode:** Full signal zero-phase alignment (`{len(ref):,}` samples)\n"
                                     f"- **Input SNR:** `{eval_res.input_snr_db:.2f} dB` &nbsp;→&nbsp; **Output SNR:** `{eval_res.output_snr_db:.2f} dB`\n"
                                     f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
                                     f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
                                     f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
                                     f"- **MAE:** `{eval_res.mae:.4f}`"
                                 )
-                            else:
-                                st.warning("Signal length is too short to evaluate causal FIR valid interval.")
                         else:
-                            eval_res = metrics_mod.evaluate_audio_quality(ref, sig, filtered_fir)
-                            st.markdown(
-                                f"- **Evaluation Mode:** Full signal zero-phase alignment (`{len(ref):,}` samples)\n"
-                                f"- **Input SNR:** `{eval_res.input_snr_db:.2f} dB` &nbsp;→&nbsp; **Output SNR:** `{eval_res.output_snr_db:.2f} dB`\n"
-                                f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
-                                f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
-                                f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
-                                f"- **MAE:** `{eval_res.mae:.4f}`"
+                            st.info(
+                                "ℹ️ **No-Reference Mode Active (Workflow B):** Objective ground-truth error metrics "
+                                "(SNR / RMSE / MAE) are not computed because no clean reference was provided. "
+                                "Inspect frequency spectrum and spectrogram below."
                             )
-                    else:
-                        st.info(
-                            "ℹ️ **No-Reference Mode Active (Workflow B):** Objective ground-truth error metrics "
-                            "(SNR / RMSE / MAE) are not computed because no clean reference was provided. "
-                            "Inspect frequency spectrum and spectrogram below."
+                    if ref is not None and mode_str == "zero_phase":
+                        fig_comp = vis_mod.plot_signal_comparison(
+                            ref, sig, filtered_fir, sr, title="Time-Domain Comparison: Clean vs. Noisy vs. FIR Filtered"
                         )
-                if ref is not None and mode_str == "zero_phase":
-                    fig_comp = vis_mod.plot_signal_comparison(
-                        ref, sig, filtered_fir, sr, title="Time-Domain Comparison: Clean vs. Noisy vs. FIR Filtered"
-                    )
-                    st.pyplot(fig_comp)
-                    plt.close(fig_comp)
+                        st.pyplot(fig_comp)
+                        plt.close(fig_comp)
 
 # =============================================================================
 # WORKSPACE 4: IIR Filter Designer
@@ -934,145 +952,147 @@ elif workspace.startswith("4"):
         sr = st.session_state.sample_rate
         nyq = sr / 2.0
 
-        col_cfg, col_res = st.columns([1.1, 1.2])
+        with st.container(border=True):
+            col_cfg, col_res = st.columns([1.1, 1.2])
 
-        with col_cfg:
-            st.subheader("IIR Design Parameters")
-            design_category = st.radio("Select IIR Family:", ["Butterworth Standard Filter", "IIR Notch Filter (Mains Hum Rejection)"])
+            with col_cfg:
+                st.subheader("IIR Design Parameters")
+                design_category = st.radio("Select IIR Family:", ["Butterworth Standard Filter", "IIR Notch Filter (Mains Hum Rejection)"])
 
-            if design_category.startswith("Butterworth"):
-                f_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
-                order = st.slider("Filter Order N:", min_value=1, max_value=10, value=4, step=1)
+                if design_category.startswith("Butterworth"):
+                    f_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
+                    order = st.slider("Filter Order N:", min_value=1, max_value=10, value=4, step=1)
 
-                if f_type in ["lowpass", "highpass"]:
-                    cutoff = st.slider(
-                        "Cutoff Frequency fc (Hz):",
-                        min_value=20.0,
-                        max_value=float(nyq - 50.0),
-                        value=min(1500.0, nyq * 0.4),
-                        step=20.0,
-                    )
-                else:
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        f_low = st.number_input("Lower Cutoff (Hz):", min_value=20.0, max_value=float(nyq - 100.0), value=300.0, step=20.0)
-                    with c2:
-                        f_high = st.number_input("Upper Cutoff (Hz):", min_value=float(f_low + 20.0), max_value=float(nyq - 50.0), value=3000.0, step=20.0)
-                    cutoff = [f_low, f_high]
-
-                mode_iir = st.radio(
-                    "Filtering Mode:",
-                    [
-                        "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
-                        "causal (sosfilt: real-time causal, minimum latency, non-linear phase response)",
-                    ],
-                    index=0,
-                )
-                mode_str = "zero_phase" if "zero_phase" in mode_iir else "causal"
-
-                try:
-                    iir_design = iir_mod.design_iir_filter(sample_rate=sr, filter_type=f_type, cutoff_hz=cutoff, order=order)
-                    design_ok = True
-                except Exception as e:
-                    st.error(f"IIR Design Error: {e}")
-                    design_ok = False
-
-                convention_text = "Butterworth -3.01 dB (|H|=1/sqrt(2))"
-
-            else:
-                f_type = "notch"
-                notch_f = st.slider("Notch Center Frequency (Hz):", min_value=20.0, max_value=500.0, value=50.0, step=1.0)
-                q_factor = st.slider("Quality Factor Q:", min_value=5.0, max_value=100.0, value=30.0, step=5.0)
-
-                mode_iir = st.radio(
-                    "Filtering Mode:",
-                    [
-                        "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
-                        "causal (sosfilt: real-time causal, non-linear phase response)",
-                    ],
-                    index=0,
-                )
-                mode_str = "zero_phase" if "zero_phase" in mode_iir else "causal"
-
-                try:
-                    iir_design = iir_mod.design_iir_notch(sample_rate=sr, notch_freq=notch_f, quality_factor=q_factor)
-                    cutoff = notch_f
-                    design_ok = True
-                except Exception as e:
-                    st.error(f"Notch Design Error: {e}")
-                    design_ok = False
-
-                convention_text = f"Narrowband notch rejection null at f0 = {notch_f:.1f} Hz (Q = {q_factor:.1f})"
-
-            if design_ok:
-                is_stable, max_pole = iir_mod.check_sos_stability(iir_design.sos)
-                st.markdown(
-                    f"- **SOS Sections:** `{iir_design.sos.shape[0]}`\n"
-                    f"- **BIBO Stability:** `{'STABLE' if is_stable else 'UNSTABLE'}` (Max pole |z| = `{max_pole:.5f}`)\n"
-                    f"- **Design Target:** `{convention_text}`"
-                )
-
-        with col_res:
-            st.subheader("Frequency and Phase Response")
-            if design_ok:
-                w_f, h_mag, h_db, phi = iir_mod.get_iir_frequency_response(iir_design, worN=2048)
-
-                fig_resp = vis_mod.plot_filter_response(
-                    w_f, h_db, title=f"IIR {f_type.capitalize()} Magnitude Response (SOS)", cutoff_hz=cutoff
-                )
-                st.pyplot(fig_resp)
-                plt.close(fig_resp)
-
-                fig_phase = vis_mod.plot_phase_response(
-                    w_f, phi, title=f"IIR {f_type.capitalize()} Phase Response (Non-linear Phase)"
-                )
-                st.pyplot(fig_phase)
-                plt.close(fig_phase)
-
-        if design_ok:
-            st.markdown("---")
-            st.subheader("Filtering Execution and Verification")
-
-            try:
-                filtered_iir = iir_mod.apply_iir_filter(sig, iir_design, mode=mode_str)
-                apply_ok = True
-            except Exception as e:
-                st.error(f"Filtering execution failed: {e}")
-                apply_ok = False
-
-            if apply_ok:
-                col_aud, col_met = st.columns([1.0, 1.2])
-
-                with col_aud:
-                    st.markdown("**IIR Filtered Audio:**")
-                    render_audio_player(filtered_iir, sr, f"IIR Filtered ({mode_str})")
-                    render_download_button(
-                        filtered_iir, sr, f"iir_filtered_{f_type}_{mode_str}.wav", "Download Filtered WAV"
-                    )
-
-                with col_met:
-                    if ref is not None:
-                        st.markdown("#### Objective Performance Metrics (Workflow A)")
-                        eval_res = metrics_mod.evaluate_audio_quality(ref, sig, filtered_iir)
-                        st.markdown(
-                            f"- **Input SNR:** `{eval_res.input_snr_db:.2f} dB` &nbsp;→&nbsp; **Output SNR:** `{eval_res.output_snr_db:.2f} dB`\n"
-                            f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
-                            f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
-                            f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
-                            f"- **MAE:** `{eval_res.mae:.4f}`"
+                    if f_type in ["lowpass", "highpass"]:
+                        cutoff = st.slider(
+                            "Cutoff Frequency fc (Hz):",
+                            min_value=20.0,
+                            max_value=float(nyq - 50.0),
+                            value=min(1500.0, nyq * 0.4),
+                            step=20.0,
                         )
                     else:
-                        st.info(
-                            "ℹ️ **No-Reference Mode Active (Workflow B):** Objective ground-truth error metrics "
-                            "are suppressed because no clean reference was provided."
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            f_low = st.number_input("Lower Cutoff (Hz):", min_value=20.0, max_value=float(nyq - 100.0), value=300.0, step=20.0)
+                        with c2:
+                            f_high = st.number_input("Upper Cutoff (Hz):", min_value=float(f_low + 20.0), max_value=float(nyq - 50.0), value=3000.0, step=20.0)
+                        cutoff = [f_low, f_high]
+
+                    mode_iir = st.radio(
+                        "Filtering Mode:",
+                        [
+                            "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
+                            "causal (sosfilt: real-time causal, minimum latency, non-linear phase response)",
+                        ],
+                        index=0,
+                    )
+                    mode_str = "zero_phase" if "zero_phase" in mode_iir else "causal"
+
+                    try:
+                        iir_design = iir_mod.design_iir_filter(sample_rate=sr, filter_type=f_type, cutoff_hz=cutoff, order=order)
+                        design_ok = True
+                    except Exception as e:
+                        st.error(f"IIR Design Error: {e}")
+                        design_ok = False
+
+                    convention_text = "Butterworth -3.01 dB (|H|=1/sqrt(2))"
+
+                else:
+                    f_type = "notch"
+                    notch_f = st.slider("Notch Center Frequency (Hz):", min_value=20.0, max_value=500.0, value=50.0, step=1.0)
+                    q_factor = st.slider("Quality Factor Q:", min_value=5.0, max_value=100.0, value=30.0, step=5.0)
+
+                    mode_iir = st.radio(
+                        "Filtering Mode:",
+                        [
+                            "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
+                            "causal (sosfilt: real-time causal, non-linear phase response)",
+                        ],
+                        index=0,
+                    )
+                    mode_str = "zero_phase" if "zero_phase" in mode_iir else "causal"
+
+                    try:
+                        iir_design = iir_mod.design_iir_notch(sample_rate=sr, notch_freq=notch_f, quality_factor=q_factor)
+                        cutoff = notch_f
+                        design_ok = True
+                    except Exception as e:
+                        st.error(f"Notch Design Error: {e}")
+                        design_ok = False
+
+                    convention_text = f"Narrowband notch rejection null at f0 = {notch_f:.1f} Hz (Q = {q_factor:.1f})"
+
+                if design_ok:
+                    is_stable, max_pole = iir_mod.check_sos_stability(iir_design.sos)
+                    st.markdown(
+                        f"- **SOS Sections:** `{iir_design.sos.shape[0]}`\n"
+                        f"- **BIBO Stability:** `{'STABLE' if is_stable else 'UNSTABLE'}` (Max pole |z| = `{max_pole:.5f}`)\n"
+                        f"- **Design Target:** `{convention_text}`"
+                    )
+
+            with col_res:
+                st.subheader("Frequency and Phase Response")
+                if design_ok:
+                    w_f, h_mag, h_db, phi = iir_mod.get_iir_frequency_response(iir_design, worN=2048)
+
+                    fig_resp = vis_mod.plot_filter_response(
+                        w_f, h_db, title=f"IIR {f_type.capitalize()} Magnitude Response (SOS)", cutoff_hz=cutoff
+                    )
+                    st.pyplot(fig_resp)
+                    plt.close(fig_resp)
+
+                    fig_phase = vis_mod.plot_phase_response(
+                        w_f, phi, title=f"IIR {f_type.capitalize()} Phase Response (Non-linear Phase)"
+                    )
+                    st.pyplot(fig_phase)
+                    plt.close(fig_phase)
+
+        with st.container(border=True):
+            if design_ok:
+                st.markdown("---")
+                st.subheader("Filtering Execution and Verification")
+
+                try:
+                    filtered_iir = iir_mod.apply_iir_filter(sig, iir_design, mode=mode_str)
+                    apply_ok = True
+                except Exception as e:
+                    st.error(f"Filtering execution failed: {e}")
+                    apply_ok = False
+
+                if apply_ok:
+                    col_aud, col_met = st.columns([1.0, 1.2])
+
+                    with col_aud:
+                        st.markdown("**IIR Filtered Audio:**")
+                        render_audio_player(filtered_iir, sr, f"IIR Filtered ({mode_str})")
+                        render_download_button(
+                            filtered_iir, sr, f"iir_filtered_{f_type}_{mode_str}.wav", "Download Filtered WAV"
                         )
 
-                if ref is not None and mode_str == "zero_phase":
-                    fig_comp = vis_mod.plot_signal_comparison(
-                        ref, sig, filtered_iir, sr, title="Time-Domain Comparison: Clean vs. Noisy vs. IIR Filtered"
-                    )
-                    st.pyplot(fig_comp)
-                    plt.close(fig_comp)
+                    with col_met:
+                        if ref is not None:
+                            st.markdown("#### Objective Performance Metrics (Workflow A)")
+                            eval_res = metrics_mod.evaluate_audio_quality(ref, sig, filtered_iir)
+                            st.markdown(
+                                f"- **Input SNR:** `{eval_res.input_snr_db:.2f} dB` &nbsp;→&nbsp; **Output SNR:** `{eval_res.output_snr_db:.2f} dB`\n"
+                                f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
+                                f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
+                                f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
+                                f"- **MAE:** `{eval_res.mae:.4f}`"
+                            )
+                        else:
+                            st.info(
+                                "ℹ️ **No-Reference Mode Active (Workflow B):** Objective ground-truth error metrics "
+                                "are suppressed because no clean reference was provided."
+                            )
+
+                    if ref is not None and mode_str == "zero_phase":
+                        fig_comp = vis_mod.plot_signal_comparison(
+                            ref, sig, filtered_iir, sr, title="Time-Domain Comparison: Clean vs. Noisy vs. IIR Filtered"
+                        )
+                        st.pyplot(fig_comp)
+                        plt.close(fig_comp)
 
 # =============================================================================
 # WORKSPACE 5: FIR vs. IIR Comparative Evaluation
@@ -1092,170 +1112,171 @@ elif workspace.startswith("5"):
         sr = st.session_state.sample_rate
         nyq = sr / 2.0
 
-        st.subheader("Matched Filter Specifications")
-        c_top, c_mode, c_cut = st.columns([1, 1, 1.2])
+        with st.container(border=True):
+            st.subheader("Matched Filter Specifications")
+            c_top, c_mode, c_cut = st.columns([1, 1, 1.2])
 
-        with c_top:
-            comp_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
-        with c_mode:
-            comp_mode = st.radio("Comparison Mode:", ["zero_phase", "causal"], index=0)
-        with c_cut:
-            if comp_type in ["lowpass", "highpass"]:
-                comp_cutoff = st.slider("Cutoff Frequency fc (Hz):", 20.0, float(nyq - 50.0), min(1500.0, nyq * 0.4), 20.0)
-            else:
-                c1, c2 = st.columns(2)
-                with c1:
-                    cf_low = st.number_input("Low Cutoff (Hz):", 20.0, float(nyq - 100.0), 300.0, 20.0)
-                with c2:
-                    cf_high = st.number_input("High Cutoff (Hz):", float(cf_low + 20.0), float(nyq - 50.0), 3000.0, 20.0)
-                comp_cutoff = [cf_low, cf_high]
+            with c_top:
+                comp_type = st.selectbox("Filter Topology:", ["lowpass", "highpass", "bandpass", "bandstop"], index=0)
+            with c_mode:
+                comp_mode = st.radio("Comparison Mode:", ["zero_phase", "causal"], index=0)
+            with c_cut:
+                if comp_type in ["lowpass", "highpass"]:
+                    comp_cutoff = st.slider("Cutoff Frequency fc (Hz):", 20.0, float(nyq - 50.0), min(1500.0, nyq * 0.4), 20.0)
+                else:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        cf_low = st.number_input("Low Cutoff (Hz):", 20.0, float(nyq - 100.0), 300.0, 20.0)
+                    with c2:
+                        cf_high = st.number_input("High Cutoff (Hz):", float(cf_low + 20.0), float(nyq - 50.0), 3000.0, 20.0)
+                    comp_cutoff = [cf_low, cf_high]
 
-        c_fir, c_iir = st.columns(2)
-        with c_fir:
-            st.markdown("**FIR Architecture:**")
-            fir_taps = st.slider("FIR Length (Taps M - odd):", 11, 401, 101, 2)
-            fir_win = st.selectbox("Window Function:", ["hamming", "hann", "blackman"], index=0)
+            c_fir, c_iir = st.columns(2)
+            with c_fir:
+                st.markdown("**FIR Architecture:**")
+                fir_taps = st.slider("FIR Length (Taps M - odd):", 11, 401, 101, 2)
+                fir_win = st.selectbox("Window Function:", ["hamming", "hann", "blackman"], index=0)
 
-        with c_iir:
-            st.markdown("**IIR Architecture:**")
-            iir_ord = st.slider("Butterworth Order N:", 1, 8, 4, 1)
-            st.caption("Implemented via Second-Order Sections (SOS).")
+            with c_iir:
+                st.markdown("**IIR Architecture:**")
+                iir_ord = st.slider("Butterworth Order N:", 1, 8, 4, 1)
+                st.caption("Implemented via Second-Order Sections (SOS).")
 
-        st.info(
-            "ℹ️ **Engineering Equivalence Note:** Windowed FIR specifies the **-6.02 dB** half-amplitude point, "
-            "whereas Butterworth IIR specifies the **-3.01 dB** half-power point. Both filters share identical cutoff parameters "
-            "within engineering tolerances."
-        )
+            st.info(
+                "ℹ️ **Engineering Equivalence Note:** Windowed FIR specifies the **-6.02 dB** half-amplitude point, "
+                "whereas Butterworth IIR specifies the **-3.01 dB** half-power point. Both filters share identical cutoff parameters "
+                "within engineering tolerances."
+            )
 
-        run_comp = st.button("Run Head-to-Head Comparative Benchmark", type="primary", use_container_width=True)
+            run_comp = st.button("Run Head-to-Head Comparative Benchmark", type="primary", use_container_width=True)
 
-        if run_comp:
-            try:
-                fir_des = fir_mod.design_fir_filter(
-                    sample_rate=sr, filter_type=comp_type, cutoff_hz=comp_cutoff, numtaps=fir_taps, window=fir_win
-                )
-                iir_des = iir_mod.design_iir_filter(
-                    sample_rate=sr, filter_type=comp_type, cutoff_hz=comp_cutoff, order=iir_ord
-                )
-            except Exception as e:
-                st.error(f"Filter design error: {e}")
-                fir_des, iir_des = None, None
+            if run_comp:
+                try:
+                    fir_des = fir_mod.design_fir_filter(
+                        sample_rate=sr, filter_type=comp_type, cutoff_hz=comp_cutoff, numtaps=fir_taps, window=fir_win
+                    )
+                    iir_des = iir_mod.design_iir_filter(
+                        sample_rate=sr, filter_type=comp_type, cutoff_hz=comp_cutoff, order=iir_ord
+                    )
+                except Exception as e:
+                    st.error(f"Filter design error: {e}")
+                    fir_des, iir_des = None, None
 
-            if fir_des and iir_des:
-                # WORKFLOW A: With Ground Truth Reference
-                if ref is not None:
-                    try:
-                        with st.spinner("Executing rigorous comparative benchmark..."):
-                            report, out_fir, out_iir = comp.compare_fir_and_iir(
-                                reference=ref,
-                                noisy_signal=sig,
-                                fir_design=fir_des,
-                                iir_design=iir_des,
-                                sample_rate=sr,
-                                mode=comp_mode,
-                                timing_trials=25,
-                                timing_warmup=5,
-                            )
-                        comp_success = True
-                    except Exception as e:
-                        st.error(f"Comparative execution failed: {e}")
-                        comp_success = False
+                if fir_des and iir_des:
+                    # WORKFLOW A: With Ground Truth Reference
+                    if ref is not None:
+                        try:
+                            with st.spinner("Executing rigorous comparative benchmark..."):
+                                report, out_fir, out_iir = comp.compare_fir_and_iir(
+                                    reference=ref,
+                                    noisy_signal=sig,
+                                    fir_design=fir_des,
+                                    iir_design=iir_des,
+                                    sample_rate=sr,
+                                    mode=comp_mode,
+                                    timing_trials=25,
+                                    timing_warmup=5,
+                                )
+                            comp_success = True
+                        except Exception as e:
+                            st.error(f"Comparative execution failed: {e}")
+                            comp_success = False
 
-                    if comp_success:
-                        st.markdown("### 📊 Benchmark Results Table")
+                        if comp_success:
+                            st.markdown("### 📊 Benchmark Results Table")
 
-                        speedup_str = format_speedup(report.speedup_ratio)
+                            speedup_str = format_speedup(report.speedup_ratio)
+                            summary_md = f"""
+    | Metric / Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Delta / Comparison |
+    | :--- | :--- | :--- | :--- |
+    | **Filtering Mode** | `{report.mode}` | `{report.mode}` | Matched |
+    | **Evaluation Interval** | `{report.evaluation_interval}` | `{report.evaluation_interval}` | Valid Sample Alignment |
+    | **Output SNR (dB)** | **{report.fir_metrics.output_snr_db:.2f} dB** | **{report.iir_metrics.output_snr_db:.2f} dB** | {report.fir_metrics.output_snr_db - report.iir_metrics.output_snr_db:+.2f} dB |
+    | **SNR Improvement (Delta SNR)** | **{report.fir_metrics.snr_improvement_db:+.2f} dB** | **{report.iir_metrics.snr_improvement_db:+.2f} dB** | {report.fir_metrics.snr_improvement_db - report.iir_metrics.snr_improvement_db:+.2f} dB |
+    | **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.iir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
+    | **RMSE Reduction (%)** | **{report.fir_metrics.rmse_reduction_percent:.2f}%** | **{report.iir_metrics.rmse_reduction_percent:.2f}%** | {report.fir_metrics.rmse_reduction_percent - report.iir_metrics.rmse_reduction_percent:+.2f}% |
+    | **Mean Absolute Error (MAE)** | `{report.fir_metrics.mae:.4f}` | `{report.iir_metrics.mae:.4f}` | {report.fir_metrics.mae - report.iir_metrics.mae:+.4f} |
+    | **Median Execution Time** | `{report.fir_metrics.execution_time_ms:.3f} ms` | `{report.iir_metrics.execution_time_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
+    | **Filter Stability** | Unconditionally Stable | BIBO Stable (SOS) | Verified |
+    """
+                            st.markdown(summary_md)
+
+                            p_col1, p_col2 = st.columns(2)
+                            with p_col1:
+                                st.markdown("**FIR Filtered Audio:**")
+                                render_audio_player(out_fir, sr, "FIR Output")
+                                render_download_button(out_fir, sr, f"fir_comp_{comp_type}.wav", "Download FIR Audio")
+                            with p_col2:
+                                st.markdown("**IIR Filtered Audio:**")
+                                render_audio_player(out_iir, sr, "IIR Output")
+                                render_download_button(out_iir, sr, f"iir_comp_{comp_type}.wav", "Download IIR Audio")
+
+                    # WORKFLOW B: Without Ground Truth Reference
+                    else:
+                        st.info("🔍 **Running Independent No-Reference Comparative Analysis (Workflow B)**")
+                        with st.spinner("Processing filters independently..."):
+                            t_fir = metrics_mod.measure_processing_time(fir_mod.apply_fir_filter, sig, fir_des, mode=comp_mode)
+                            t_iir = metrics_mod.measure_processing_time(iir_mod.apply_iir_filter, sig, iir_des, mode=comp_mode)
+                            out_fir = fir_mod.apply_fir_filter(sig, fir_des, mode=comp_mode)
+                            out_iir = iir_mod.apply_iir_filter(sig, iir_des, mode=comp_mode)
+
+                            fir_ms = t_fir["median_ms"]
+                            iir_ms = t_iir["median_ms"]
+                            speedup_val = fir_ms / iir_ms if iir_ms > 0 else None
+                            speedup_str = format_speedup(speedup_val)
+
+                            phase_note_fir = "Linear Phase (Group delay tau = (M-1)/2)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
+                            phase_note_iir = "Non-linear Phase (Frequency-dependent group delay)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
+
                         summary_md = f"""
-| Metric / Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Delta / Comparison |
-| :--- | :--- | :--- | :--- |
-| **Filtering Mode** | `{report.mode}` | `{report.mode}` | Matched |
-| **Evaluation Interval** | `{report.evaluation_interval}` | `{report.evaluation_interval}` | Valid Sample Alignment |
-| **Output SNR (dB)** | **{report.fir_metrics.output_snr_db:.2f} dB** | **{report.iir_metrics.output_snr_db:.2f} dB** | {report.fir_metrics.output_snr_db - report.iir_metrics.output_snr_db:+.2f} dB |
-| **SNR Improvement (Delta SNR)** | **{report.fir_metrics.snr_improvement_db:+.2f} dB** | **{report.iir_metrics.snr_improvement_db:+.2f} dB** | {report.fir_metrics.snr_improvement_db - report.iir_metrics.snr_improvement_db:+.2f} dB |
-| **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.iir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
-| **RMSE Reduction (%)** | **{report.fir_metrics.rmse_reduction_percent:.2f}%** | **{report.iir_metrics.rmse_reduction_percent:.2f}%** | {report.fir_metrics.rmse_reduction_percent - report.iir_metrics.rmse_reduction_percent:+.2f}% |
-| **Mean Absolute Error (MAE)** | `{report.fir_metrics.mae:.4f}` | `{report.iir_metrics.mae:.4f}` | {report.fir_metrics.mae - report.iir_metrics.mae:+.4f} |
-| **Median Execution Time** | `{report.fir_metrics.execution_time_ms:.3f} ms` | `{report.iir_metrics.execution_time_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
-| **Filter Stability** | Unconditionally Stable | BIBO Stable (SOS) | Verified |
-"""
+    | Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Comparison |
+    | :--- | :--- | :--- | :--- |
+    | **Filtering Mode** | `{comp_mode}` | `{comp_mode}` | Matched |
+    | **Ground Truth Reference** | Not Available | Not Available | Reference-based error metrics suppressed |
+    | **Filter Topology** | `{comp_type.capitalize()}` | `{comp_type.capitalize()}` | Matched |
+    | **Median Execution Time** | `{fir_ms:.3f} ms` | `{iir_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
+    | **Phase Characteristics** | `{phase_note_fir}` | `{phase_note_iir}` | Structural Property |
+    | **Stability** | Unconditionally Stable | Stable (SOS form) | Verified |
+    """
                         st.markdown(summary_md)
 
                         p_col1, p_col2 = st.columns(2)
                         with p_col1:
                             st.markdown("**FIR Filtered Audio:**")
                             render_audio_player(out_fir, sr, "FIR Output")
-                            render_download_button(out_fir, sr, f"fir_comp_{comp_type}.wav", "Download FIR Audio")
+                            render_download_button(out_fir, sr, f"fir_comp_noref_{comp_type}.wav", "Download FIR Audio")
                         with p_col2:
                             st.markdown("**IIR Filtered Audio:**")
                             render_audio_player(out_iir, sr, "IIR Output")
-                            render_download_button(out_iir, sr, f"iir_comp_{comp_type}.wav", "Download IIR Audio")
+                            render_download_button(out_iir, sr, f"iir_comp_noref_{comp_type}.wav", "Download IIR Audio")
 
-                # WORKFLOW B: Without Ground Truth Reference
-                else:
-                    st.info("🔍 **Running Independent No-Reference Comparative Analysis (Workflow B)**")
-                    with st.spinner("Processing filters independently..."):
-                        t_fir = metrics_mod.measure_processing_time(fir_mod.apply_fir_filter, sig, fir_des, mode=comp_mode)
-                        t_iir = metrics_mod.measure_processing_time(iir_mod.apply_iir_filter, sig, iir_des, mode=comp_mode)
-                        out_fir = fir_mod.apply_fir_filter(sig, fir_des, mode=comp_mode)
-                        out_iir = iir_mod.apply_iir_filter(sig, iir_des, mode=comp_mode)
+                    # Frequency and Phase Overlay Curves (Valid for both workflows)
+                    st.markdown("### 📈 Comparative Filter Response Curves")
+                    wf_fir, _, h_db_fir, phi_fir = fir_mod.get_fir_frequency_response(fir_des, worN=2048)
+                    wf_iir, _, h_db_iir, phi_iir = iir_mod.get_iir_frequency_response(iir_des, worN=2048)
 
-                        fir_ms = t_fir["median_ms"]
-                        iir_ms = t_iir["median_ms"]
-                        speedup_val = fir_ms / iir_ms if iir_ms > 0 else None
-                        speedup_str = format_speedup(speedup_val)
+                    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+                    ax1.plot(wf_fir, h_db_fir, label=f"FIR (M={fir_taps})", color="#1f77b4", lw=1.8)
+                    ax1.plot(wf_iir, h_db_iir, label=f"IIR (N={iir_ord})", color="#ff7f0e", lw=1.8, linestyle="--")
+                    ax1.set_title("Magnitude Response Comparison")
+                    ax1.set_xlabel("Frequency (Hz)")
+                    ax1.set_ylabel("Magnitude (dB)")
+                    ax1.set_ylim(-80, 5)
+                    ax1.set_xlim(0, min(sr // 2, 8000))
+                    ax1.grid(True, alpha=0.3)
+                    ax1.legend()
 
-                        phase_note_fir = "Linear Phase (Group delay tau = (M-1)/2)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
-                        phase_note_iir = "Non-linear Phase (Frequency-dependent group delay)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
-
-                    summary_md = f"""
-| Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Comparison |
-| :--- | :--- | :--- | :--- |
-| **Filtering Mode** | `{comp_mode}` | `{comp_mode}` | Matched |
-| **Ground Truth Reference** | Not Available | Not Available | Reference-based error metrics suppressed |
-| **Filter Topology** | `{comp_type.capitalize()}` | `{comp_type.capitalize()}` | Matched |
-| **Median Execution Time** | `{fir_ms:.3f} ms` | `{iir_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
-| **Phase Characteristics** | `{phase_note_fir}` | `{phase_note_iir}` | Structural Property |
-| **Stability** | Unconditionally Stable | Stable (SOS form) | Verified |
-"""
-                    st.markdown(summary_md)
-
-                    p_col1, p_col2 = st.columns(2)
-                    with p_col1:
-                        st.markdown("**FIR Filtered Audio:**")
-                        render_audio_player(out_fir, sr, "FIR Output")
-                        render_download_button(out_fir, sr, f"fir_comp_noref_{comp_type}.wav", "Download FIR Audio")
-                    with p_col2:
-                        st.markdown("**IIR Filtered Audio:**")
-                        render_audio_player(out_iir, sr, "IIR Output")
-                        render_download_button(out_iir, sr, f"iir_comp_noref_{comp_type}.wav", "Download IIR Audio")
-
-                # Frequency and Phase Overlay Curves (Valid for both workflows)
-                st.markdown("### 📈 Comparative Filter Response Curves")
-                wf_fir, _, h_db_fir, phi_fir = fir_mod.get_fir_frequency_response(fir_des, worN=2048)
-                wf_iir, _, h_db_iir, phi_iir = iir_mod.get_iir_frequency_response(iir_des, worN=2048)
-
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-                ax1.plot(wf_fir, h_db_fir, label=f"FIR (M={fir_taps})", color="#1f77b4", lw=1.8)
-                ax1.plot(wf_iir, h_db_iir, label=f"IIR (N={iir_ord})", color="#ff7f0e", lw=1.8, linestyle="--")
-                ax1.set_title("Magnitude Response Comparison")
-                ax1.set_xlabel("Frequency (Hz)")
-                ax1.set_ylabel("Magnitude (dB)")
-                ax1.set_ylim(-80, 5)
-                ax1.set_xlim(0, min(sr // 2, 8000))
-                ax1.grid(True, alpha=0.3)
-                ax1.legend()
-
-                ax2.plot(wf_fir, phi_fir, label="FIR Phase", color="#1f77b4", lw=1.8)
-                ax2.plot(wf_iir, phi_iir, label="IIR Phase", color="#ff7f0e", lw=1.8, linestyle="--")
-                ax2.set_title("Phase Response Comparison")
-                ax2.set_xlabel("Frequency (Hz)")
-                ax2.set_ylabel("Phase (radians)")
-                ax2.set_xlim(0, min(sr // 2, 8000))
-                ax2.grid(True, alpha=0.3)
-                ax2.legend()
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                    ax2.plot(wf_fir, phi_fir, label="FIR Phase", color="#1f77b4", lw=1.8)
+                    ax2.plot(wf_iir, phi_iir, label="IIR Phase", color="#ff7f0e", lw=1.8, linestyle="--")
+                    ax2.set_title("Phase Response Comparison")
+                    ax2.set_xlabel("Frequency (Hz)")
+                    ax2.set_ylabel("Phase (radians)")
+                    ax2.set_xlim(0, min(sr // 2, 8000))
+                    ax2.grid(True, alpha=0.3)
+                    ax2.legend()
+                    fig.tight_layout()
+                    st.pyplot(fig)
+                    plt.close(fig)
 
 # =============================================================================
 # WORKSPACE 6: Signal Analysis and Spectral Diagnostics
