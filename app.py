@@ -34,236 +34,70 @@ st.markdown(
     """
     <style>
     :root {
-        --ac-ink: #14243b;
-        --ac-muted: #66758b;
-        --ac-blue: #2563eb;
-        --ac-cyan: #38bdf8;
-        --ac-line: #e3eaf3;
-        --ac-surface: #ffffff;
+      --ac-bg:#f5f7fb; --ac-surface:#ffffff; --ac-ink:#17263c;
+      --ac-muted:#68788e; --ac-blue:#2563eb; --ac-cyan:#0ea5e9;
+      --ac-line:#e5eaf2; --ac-navy:#101e33; --ac-shadow:0 8px 26px rgba(19,38,65,.055);
     }
-    html, body, [class*="css"] {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .stApp {
-        background: #f3f6fb;
-        color: var(--ac-ink);
-    }
-    [data-testid="stHeader"] {
-        background: rgba(243, 246, 251, 0.88);
-    }
-    .block-container {
-        max-width: 1500px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-    }
-    h1, h2, h3, h4, p, label, [data-testid="stMarkdownContainer"] {
-        color: var(--ac-ink);
-    }
-    h2, h3 {
-        letter-spacing: -0.025em;
-        font-weight: 700;
-    }
-    .main-title {
-        font-size: clamp(1.65rem, 2.4vw, 2.15rem);
-        line-height: 1.18;
-        font-weight: 800;
-        letter-spacing: -0.045em;
-        color: #14243b;
-        margin: 1.7rem 0 0.35rem;
-    }
-    .sub-title {
-        font-size: 1rem;
-        line-height: 1.65;
-        color: var(--ac-muted);
-        margin: 0 0 1.5rem;
-        max-width: 850px;
-    }
-    .ac-hero {
-        position: relative;
-        overflow: hidden;
-        padding: 1.65rem 1.85rem;
-        margin: 0 0 1.2rem;
-        border: 1px solid rgba(148, 190, 255, 0.22);
-        border-radius: 22px;
-        color: #f8fbff;
-        background: linear-gradient(118deg, #101f38 0%, #173b68 58%, #155e85 100%);
-        box-shadow: 0 16px 38px rgba(24, 55, 94, 0.13);
-    }
-    .ac-hero:after {
-        content: "";
-        position: absolute;
-        width: 280px;
-        height: 280px;
-        right: -85px;
-        top: -155px;
-        border: 1px solid rgba(186, 230, 253, 0.23);
-        border-radius: 50%;
-        box-shadow: 0 0 0 28px rgba(186, 230, 253, 0.045), 0 0 0 58px rgba(186, 230, 253, 0.035);
-        pointer-events: none;
-    }
-    .ac-hero-kicker {
-        color: #9bdcfb;
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        margin-bottom: 0.65rem;
-    }
-    .ac-hero-title {
-        color: #ffffff;
-        font-size: clamp(1.8rem, 3.1vw, 2.55rem);
-        font-weight: 850;
-        line-height: 1.08;
-        letter-spacing: -0.055em;
-        margin: 0 0 0.55rem;
-    }
-    .ac-hero-copy {
-        color: #d5e5f6;
-        font-size: 0.96rem;
-        line-height: 1.6;
-        max-width: 760px;
-        margin: 0;
-    }
-    .ac-hero-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem;
-        margin-top: 1.1rem;
-    }
-    .ac-pill {
-        display: inline-flex;
-        align-items: center;
-        border: 1px solid rgba(219, 234, 254, 0.22);
-        background: rgba(255, 255, 255, 0.09);
-        color: #e8f5ff;
-        padding: 0.32rem 0.68rem;
-        border-radius: 999px;
-        font-size: 0.74rem;
-        font-weight: 650;
-    }
-    .metric-badge {
-        background: #ffffff;
-        border: 1px solid var(--ac-line);
-        border-left: 4px solid var(--ac-blue);
-        padding: 0.85rem 1rem;
-        margin-bottom: 0.65rem;
-        border-radius: 13px;
-        box-shadow: 0 4px 14px rgba(28, 51, 84, 0.035);
-    }
-    [data-testid="stMetric"] {
-        background: #ffffff;
-        border: 1px solid var(--ac-line);
-        padding: 0.85rem 1rem;
-        border-radius: 15px;
-        box-shadow: 0 4px 14px rgba(28, 51, 84, 0.035);
-    }
-    [data-testid="stMetricLabel"] {
-        color: #687991;
-        font-size: 0.78rem;
-        font-weight: 650;
-    }
-    [data-testid="stMetricValue"] {
-        color: #14243b;
-        font-weight: 800;
-        letter-spacing: -0.035em;
-    }
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #101f38 0%, #142d4b 100%);
-        border-right: 1px solid rgba(255,255,255,0.08);
-    }
-    section[data-testid="stSidebar"] * {
-        color: #eaf2fb;
-    }
-    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-        color: #c2d3e6;
-    }
-    section[data-testid="stSidebar"] hr {
-        border-color: rgba(219, 234, 254, 0.16);
-    }
-    section[data-testid="stSidebar"] [data-testid="stAlert"] {
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.13);
-    }
-    section[data-testid="stSidebar"] div[role="radiogroup"] {
-        gap: 0.38rem;
-    }
-    section[data-testid="stSidebar"] div[role="radiogroup"] label {
-        background: rgba(255,255,255,0.055);
-        border: 1px solid rgba(219,234,254,0.11);
-        border-radius: 11px;
-        padding: 0.62rem 0.72rem;
-        transition: background 120ms ease, border-color 120ms ease;
-    }
-    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.12);
-        border-color: rgba(125,211,252,0.4);
-    }
-    section[data-testid="stSidebar"] div[role="radiogroup"] label p {
-        font-size: 0.88rem;
-        font-weight: 650;
-    }
-    .stButton > button, .stDownloadButton > button {
-        min-height: 2.65rem;
-        border-radius: 11px;
-        border: 1px solid #d5e0ef;
-        font-weight: 700;
-        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-    }
-    .stButton > button[kind="primary"], .stDownloadButton > button[kind="primary"] {
-        background: linear-gradient(105deg, #1d4ed8, #0e7490);
-        border: 0;
-        color: white;
-        box-shadow: 0 7px 16px rgba(37,99,235,0.17);
-    }
-    .stButton > button:hover, .stDownloadButton > button:hover {
-        border-color: #8ab7f7;
-        transform: translateY(-1px);
-        box-shadow: 0 7px 18px rgba(27, 62, 110, 0.10);
-    }
-    [data-testid="stFileUploader"] section {
-        background: #f8fbff;
-        border: 1.5px dashed #b9cce3;
-        border-radius: 15px;
-    }
-    [data-testid="stFileUploader"] section:hover {
-        border-color: #4f8fe8;
-        background: #f2f8ff;
-    }
-    [data-testid="stAudio"] {
-        border: 1px solid var(--ac-line);
-        border-radius: 13px;
-        padding: 0.3rem;
-        background: #ffffff;
-    }
-    [data-testid="stExpander"], [data-testid="stVerticalBlockBorderWrapper"] {
-        border-color: var(--ac-line);
-        border-radius: 14px;
-    }
-    .stAlert {
-        border-radius: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-    [data-testid="stDataFrame"], [data-testid="stTable"] {
-        border: 1px solid var(--ac-line);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .stTabs [data-baseweb="tab"] {
-        font-weight: 700;
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #1d4ed8;
-    }
-    div[data-testid="stMarkdownContainer"] hr {
-        border-color: #e2eaf4;
-        margin: 1.35rem 0;
-    }
-    @media (max-width: 768px) {
-        .block-container { padding: 1rem 1rem 2rem; }
-        .ac-hero { padding: 1.3rem 1.15rem; border-radius: 17px; }
-        .main-title { margin-top: 1.2rem; }
+    html,body,[class*="css"] {font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    .stApp {background:var(--ac-bg);color:var(--ac-ink);}
+    [data-testid="stHeader"] {background:rgba(245,247,251,.92);}
+    [data-testid="stToolbar"] {right:1rem;}
+    .block-container {max-width:1480px;padding-top:1.35rem;padding-bottom:3rem;}
+    h1,h2,h3,h4,p,label {color:var(--ac-ink);}
+    h1,h2,h3 {letter-spacing:-.035em;}
+    h2 {font-size:1.38rem;font-weight:750;}
+    h3 {font-size:1.12rem;font-weight:720;}
+    .ac-topbar {display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.2rem 0 1.05rem;margin-bottom:1.15rem;border-bottom:1px solid var(--ac-line);}
+    .ac-brand {display:flex;align-items:center;gap:.75rem;}
+    .ac-brand-mark {display:flex;align-items:center;justify-content:center;width:2.45rem;height:2.45rem;border-radius:12px;background:linear-gradient(145deg,#2563eb,#0891b2);color:white;font-size:1.2rem;font-weight:800;box-shadow:0 5px 13px rgba(37,99,235,.2);}
+    .ac-brand-name {font-size:1.08rem;font-weight:800;letter-spacing:-.035em;color:#14243b;line-height:1.2;}
+    .ac-brand-sub {font-size:.7rem;color:#718096;margin-top:.12rem;letter-spacing:.035em;}
+    .ac-top-meta {display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;}
+    .ac-top-chip {font-size:.72rem;font-weight:650;color:#42546d;background:#fff;border:1px solid var(--ac-line);border-radius:999px;padding:.38rem .68rem;}
+    .ac-live-dot {display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;margin-right:.38rem;}
+    .ac-page-head {margin:.25rem 0 1.05rem;}
+    .ac-eyebrow {font-size:.68rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#2563eb;margin-bottom:.38rem;}
+    .ac-page-title {font-size:clamp(1.55rem,2.5vw,2.05rem);font-weight:800;line-height:1.15;letter-spacing:-.05em;color:#14243b;margin:0;}
+    .ac-page-copy {font-size:.91rem;color:var(--ac-muted);line-height:1.55;margin:.42rem 0 0;max-width:850px;}
+    .ac-status-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:.9rem 0 1.4rem;}
+    .ac-status-card {background:#fff;border:1px solid var(--ac-line);border-radius:13px;padding:.8rem .95rem;box-shadow:0 3px 12px rgba(20,40,70,.025);min-width:0;}
+    .ac-status-label {font-size:.66rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:#78879b;}
+    .ac-status-value {font-size:1.04rem;font-weight:780;letter-spacing:-.025em;color:#17263c;margin-top:.22rem;overflow-wrap:anywhere;}
+    .ac-status-note {font-size:.7rem;color:#8491a3;margin-top:.12rem;}
+    .main-title {font-size:clamp(1.45rem,2.2vw,1.85rem);line-height:1.2;font-weight:800;letter-spacing:-.045em;color:#14243b;margin:1.15rem 0 .28rem;}
+    .sub-title {font-size:.91rem;line-height:1.6;color:var(--ac-muted);margin:0 0 1.3rem;max-width:900px;}
+    [data-testid="stMetric"] {background:#fff;border:1px solid var(--ac-line);padding:.8rem .95rem;border-radius:13px;box-shadow:0 3px 12px rgba(20,40,70,.025);}
+    [data-testid="stMetricLabel"] {color:#718096;font-size:.72rem;font-weight:700;}
+    [data-testid="stMetricValue"] {color:#17263c;font-weight:800;letter-spacing:-.035em;}
+    section[data-testid="stSidebar"] {background:linear-gradient(180deg,#101e33 0%,#172d49 100%);border-right:1px solid rgba(255,255,255,.08);}
+    section[data-testid="stSidebar"] * {color:#eaf2fb;}
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {color:#c0cede;}
+    section[data-testid="stSidebar"] hr {border-color:rgba(219,234,254,.14);margin:1rem 0;}
+    section[data-testid="stSidebar"] div[role="radiogroup"] {gap:.42rem;}
+    section[data-testid="stSidebar"] div[role="radiogroup"] label {background:rgba(255,255,255,.045);border:1px solid rgba(219,234,254,.09);border-radius:10px;padding:.58rem .68rem;transition:background .15s,border-color .15s;}
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background:rgba(255,255,255,.11);border-color:rgba(125,211,252,.38);}
+    section[data-testid="stSidebar"] div[role="radiogroup"] label p {font-size:.84rem;font-weight:650;}
+    section[data-testid="stSidebar"] [data-testid="stAlert"] {background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);}
+    .stButton>button,.stDownloadButton>button {min-height:2.55rem;border-radius:10px;border:1px solid #d9e2ef;font-weight:700;transition:all .15s ease;}
+    .stButton>button[kind="primary"],.stDownloadButton>button[kind="primary"] {background:linear-gradient(105deg,#2563eb,#087eaa);border:0;color:#fff;box-shadow:0 5px 14px rgba(37,99,235,.16);}
+    .stButton>button:hover,.stDownloadButton>button:hover {border-color:#8bb8f3;transform:translateY(-1px);box-shadow:0 6px 16px rgba(27,62,110,.1);}
+    [data-testid="stFileUploader"] section {background:#fbfdff;border:1.5px dashed #c3d2e5;border-radius:13px;}
+    [data-testid="stFileUploader"] section:hover {border-color:#4f8fe8;background:#f5f9ff;}
+    [data-testid="stAudio"] {border:1px solid var(--ac-line);border-radius:11px;padding:.25rem;background:#fff;}
+    [data-testid="stExpander"],[data-testid="stVerticalBlockBorderWrapper"] {border-color:var(--ac-line);border-radius:12px;}
+    .stAlert {border-radius:11px;border:1px solid rgba(148,163,184,.2);}
+    [data-testid="stDataFrame"],[data-testid="stTable"] {border:1px solid var(--ac-line);border-radius:11px;overflow:hidden;}
+    .stTabs [data-baseweb="tab"] {font-weight:700;padding:.68rem .9rem;}
+    .stTabs [aria-selected="true"] {color:#2563eb;}
+    div[data-testid="stMarkdownContainer"] hr {border-color:var(--ac-line);margin:1.2rem 0;}
+    @media(max-width:900px) {.ac-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(max-width:640px) {
+      .block-container{padding:1rem .9rem 2rem;}
+      .ac-topbar{align-items:flex-start;flex-direction:column;}
+      .ac-top-meta{justify-content:flex-start;}
+      .ac-status-grid{gap:.5rem;}
+      .ac-status-card{padding:.68rem .72rem;}
+      .main-title{margin-top:.8rem;}
     }
     </style>
     """,
@@ -500,29 +334,50 @@ workspace_key = workspace.split()[0]
 workspace_name, workspace_copy = workspace_names.get(workspace_key, ("DSP workspace", "Explore the signal processing workflow."))
 
 st.markdown(
-    f"""
-    <div class="ac-hero">
-      <div class="ac-hero-kicker">Digital audio processing · Interactive engineering workbench</div>
-      <div class="ac-hero-title">AudioClean <span style="color:#7dd3fc;">DSP</span></div>
-      <p class="ac-hero-copy">A practical environment for audio denoising, digital filter design and evidence-based FIR vs. IIR analysis.</p>
-      <div class="ac-hero-meta">
-        <span class="ac-pill">Python · SciPy</span>
-        <span class="ac-pill">FIR + IIR</span>
-        <span class="ac-pill">FFT · STFT</span>
-        <span class="ac-pill">SNR · RMSE · MAE</span>
+    """
+    <div class="ac-topbar">
+      <div class="ac-brand">
+        <div class="ac-brand-mark">A</div>
+        <div>
+          <div class="ac-brand-name">AudioClean <span style="color:#2563eb;">DSP</span></div>
+          <div class="ac-brand-sub">DIGITAL SIGNAL PROCESSING WORKBENCH</div>
+        </div>
+      </div>
+      <div class="ac-top-meta">
+        <span class="ac-top-chip"><span class="ac-live-dot"></span>Session active</span>
+        <span class="ac-top-chip">Python · SciPy</span>
+        <span class="ac-top-chip">Build 1.4</span>
       </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    f"""
+    <div class="ac-page-head">
+      <div class="ac-eyebrow">Engineering workspace / {workspace_key} of 6</div>
+      <div class="ac-page-title">{workspace_name}</div>
+      <p class="ac-page-copy">{workspace_copy} Configure the signal-processing workflow and inspect the resulting evidence.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 if active_sig is not None:
-    status_cols = st.columns(4)
-    status_cols[0].metric("ACTIVE WORKSPACE", workspace_name)
-    status_cols[1].metric("SAMPLE RATE", f"{sr:,} Hz")
-    status_cols[2].metric("RECORDING LENGTH", f"{dur:.2f} s")
-    status_cols[3].metric("REFERENCE", "Available" if has_ref else "Not attached")
-    st.caption(workspace_copy)
+    channels_label = "Mono" if channels == 1 else "Stereo"
+    reference_label = "Attached" if has_ref else "Not attached"
+    st.markdown(
+        f"""
+        <div class="ac-status-grid">
+          <div class="ac-status-card"><div class="ac-status-label">Signal sample rate</div><div class="ac-status-value">{sr:,} Hz</div><div class="ac-status-note">Current working signal</div></div>
+          <div class="ac-status-card"><div class="ac-status-label">Recording duration</div><div class="ac-status-value">{dur:.2f} s</div><div class="ac-status-note">{len(active_sig):,} samples</div></div>
+          <div class="ac-status-card"><div class="ac-status-label">Channel layout</div><div class="ac-status-value">{channels_label}</div><div class="ac-status-note">Loaded audio format</div></div>
+          <div class="ac-status-card"><div class="ac-status-label">Clean reference</div><div class="ac-status-value">{reference_label}</div><div class="ac-status-note">Objective metrics availability</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # =============================================================================
 # WORKSPACE 1: Audio Workspace
