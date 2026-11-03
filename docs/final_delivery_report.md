@@ -75,6 +75,23 @@
 - `tests/test_preprocessing.py`: 14 tests
 - `tests/test_visualization.py`: 8 tests
 
+### 4.4 Cross-Version GitHub Actions CI (November 2026)
+
+A repository-level GitHub Actions workflow was added at `.github/workflows/ci.yml`. It runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. Each matrix job installs `requirements.txt`, compiles `app.py`, `src`, `tests`, and `scripts`, then executes `pytest -q`.
+
+| CI environment | Compilation | Pytest |
+| :--- | :---: | :---: |
+| Ubuntu / Python 3.10 | PASS | 150 passed |
+| Ubuntu / Python 3.12 | PASS | 150 passed |
+| Ubuntu / Python 3.13 | PASS | 150 passed |
+
+- **Workflow run:** [GitHub Actions run 41579919481](https://github.com/umeshpandeysh/AudioClean-DSP/actions/runs/41579919481)
+- **Validated commit:** `2c07e4e2221bbac59305510f0de2a30a600ddb66`
+- **Final run conclusion:** SUCCESS; all three matrix jobs completed successfully.
+- **Aggregate executions:** 450 successful test executions (150 unique tests executed independently in each of three Python environments).
+
+This CI matrix does not include Python 3.11. It validates compilation and automated tests; it does not constitute live browser/device testing of the hosted Streamlit application.
+
 ### 4.3 Reproducible Numerical Verification & Benchmarking
 - Executed `scripts/verify_audit_remediation.py`: All 6 numerical verification experiments passed cleanly.
 - Executed permanent benchmark script `scripts/benchmark_performance.py`: Standardized 30-trial benchmark across 1s, 5s, 30s, and 60s signal durations verified.
@@ -105,6 +122,22 @@ Controlled benchmarks on 64-bit AMD64 ($f_s = 44,100\text{ Hz}$), 30 repetitions
 4. **Lossy Codec Exclusion:** Audio I/O exclusively supports uncompressed PCM WAV files.
 
 ---
+
+## 6. UI/UX and Application Presentation Updates (November 2026)
+
+The Streamlit presentation layer was incrementally refined without changing the DSP algorithms or metric formulas.
+
+- Applied a consistent light-blue/white theme and native Streamlit theme configuration.
+- Refined the branded header, workspace headings, session indicator, status cards, and numbered sidebar navigation.
+- Grouped the six workspaces into bordered control, inspection, execution, and result panels.
+- Unified plot styling across waveform, FFT, spectrogram, filter magnitude/phase, and FIR/IIR comparison visualizations.
+- Added a four-stage workflow navigator and a processing-capability ribbon.
+- Added restrained CSS motion and interaction feedback: page entrance, animated header accent, status pulse, brand shimmer, hover states, and button feedback.
+- Preserved reduced-motion handling and responsive layout rules for narrower/mobile viewports.
+- Fixed malformed statement/indentation errors in the reference-removal, time-domain waveform, and STFT display sections.
+- Corrected FIR/IIR objective metric presentation to use `AudioEvaluationResult.input_mae` and `output_mae`, matching the dataclass contract.
+
+No filter design, filtering, FFT/STFT, comparison, or objective-metric computation was intentionally changed by these presentation fixes. Automated CI passing does not replace manual visual acceptance testing on deployed browsers and mobile devices.
 
 ## 7. Final Project Verdict
 **VERDICT: COMPLETE WITH DOCUMENTED LIMITATIONS**
