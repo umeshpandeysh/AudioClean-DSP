@@ -1,10 +1,11 @@
-﻿# AudioClean DSP — Digital Audio Noise Removal & Comparative Filter Performance Analysis
+# AudioClean DSP — Digital Audio Noise Removal & Comparative Filter Performance Analysis
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-1.66.1-red.svg)](https://streamlit.io/)
-[![Tests Passing](https://img.shields.io/badge/pytest-139%20passed-brightgreen.svg)](https://pytest.org/)
+[![Tests Passing](https://img.shields.io/badge/pytest-149%20passed-brightgreen.svg)](https://pytest.org/)
 
 **AudioClean DSP** is a comprehensive undergraduate Digital Signal Processing (DSP) engineering application and laboratory workbench designed for digital audio noise removal and rigorous, scientifically grounded comparative performance analysis between **Finite Impulse Response (FIR)** and **Infinite Impulse Response (IIR)** digital filters.
+
 
 ---
 
@@ -99,19 +100,20 @@ AudioClean-DSP/
 │   ├── metrics.py             # SNR, RMSE, MAE, and timing measurement harness
 │   └── comparison.py          # Rigorous FIR vs. IIR head-to-head comparison engine
 │
-├── tests/                     # Automated Test Suite (139 tests)
+├── tests/                     # Automated Test Suite (149 tests)
 │   ├── __init__.py
 │   ├── conftest.py            # Shared fixtures and synthesized test signals
-│   ├── test_audio_io.py       # Audio I/O unit tests (12 tests)
-│   ├── test_preprocessing.py  # Preprocessing and validation tests (13 tests)
-│   ├── test_noise_generator.py# Noise synthesis and calibration tests (7 tests)
-│   ├── test_fir_filters.py    # FIR design, symmetry, and filtering tests (20 tests)
-│   ├── test_iir_filters.py    # IIR design, SOS stability, and notch tests (23 tests)
+│   ├── test_app.py            # Streamlit UI contracts, state, provenance & AppTest (20 tests)
+│   ├── test_audio_io.py       # Audio I/O loading, saving, and info tests (9 tests)
+│   ├── test_comparison.py     # Comparison engine and causal interval tests (9 tests)
 │   ├── test_fft_analysis.py   # FFT calibration and spectrogram tests (15 tests)
-│   ├── test_metrics.py        # Objective metric mathematical accuracy tests (20 tests)
-│   ├── test_comparison.py     # Comparison engine and interval validation tests (8 tests)
+│   ├── test_fir_filters.py    # FIR design, symmetry, and filtering tests (21 tests)
+│   ├── test_iir_filters.py    # IIR design, SOS stability, and notch tests (23 tests)
 │   ├── test_integration.py    # Full end-to-end DSP pipeline integration tests (2 tests)
-│   └── test_app.py            # Streamlit application helper contract & AppTest tests (10 tests)
+│   ├── test_metrics.py        # Objective SNR, RMSE, MAE mathematical accuracy tests (21 tests)
+│   ├── test_noise_generator.py# Noise synthesis and SNR calibration tests (7 tests)
+│   ├── test_preprocessing.py  # Preprocessing, normalization, and validation tests (14 tests)
+│   └── test_visualization.py  # Diagnostic plotting and figure export tests (8 tests)
 │
 ├── docs/                      # Engineering Documentation
 │   ├── architecture.md        # System architecture specification
@@ -121,7 +123,8 @@ AudioClean-DSP/
 │   ├── test_coverage_matrix.md     # Traceability coverage matrix
 │   └── final_delivery_report.md    # Final project closure report
 │
-├── scripts/                   # Verification Scripts
+├── scripts/                   # Verification & Benchmark Scripts
+│   ├── benchmark_performance.py    # Standardized 30-trial benchmark (1s, 5s, 30s, 60s)
 │   ├── verify_audit_remediation.py # 6-experiment mathematical verification pipeline
 │   ├── verify_phase2.py
 │   ├── verify_phase4_5.py
@@ -180,7 +183,7 @@ Open your browser to `http://localhost:8501`.
 
 ## 7. Running the Automated Test Suite
 
-Run all 139 unit, integration, and contract tests:
+Run all 149 unit, integration, and contract tests:
 ```powershell
 python -m pytest -v tests
 ```
@@ -194,6 +197,12 @@ Run the standalone 6-experiment mathematical audit script:
 ```powershell
 python scripts/verify_audit_remediation.py
 ```
+
+Run the standardized 30-trial benchmark reproduction script:
+```powershell
+python scripts/benchmark_performance.py
+```
+
 
 ---
 

@@ -1,10 +1,11 @@
-﻿"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
+"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
 
 Phase 4 Implementation for AudioClean DSP.
 """
 
 import hashlib
 import io
+import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
@@ -135,6 +136,22 @@ def apply_linked_normalization(
     norm_data = audio_data * gain if audio_data is not None else None
     return norm_noisy, norm_ref, norm_data, gain
 
+
+def format_speedup(val: Optional[Union[float, int]]) -> str:
+    """Format speedup ratio safely or return 'N/A' if None, non-finite, or non-positive.
+
+    Guarantees no invalid None comparisons or crashing on non-finite values.
+    """
+    if val is None:
+        return "N/A"
+    try:
+        f_val = float(val)
+        if math.isfinite(f_val) and f_val > 0.0:
+            return f"{f_val:.2f}x"
+        return "N/A"
+    except (TypeError, ValueError):
+        return "N/A"
+
 # -----------------------------------------------------------------------------
 # Session State Initialization
 # -----------------------------------------------------------------------------
@@ -154,6 +171,8 @@ if "primary_file_hash" not in st.session_state:
     st.session_state.primary_file_hash = None
 if "ref_file_hash" not in st.session_state:
     st.session_state.ref_file_hash = None
+if "ref_primary_hash" not in st.session_state:
+    st.session_state.ref_primary_hash = None
 if "active_ingest_mode" not in st.session_state:
     st.session_state.active_ingest_mode = "Workflow A"
 
@@ -247,13 +266,16 @@ if workspace.startswith("1"):
         if selected_mode_key != st.session_state.active_ingest_mode:
             st.session_state.active_ingest_mode = selected_mode_key
             st.session_state.ref_file_hash = None
+            st.session_state.ref_primary_hash = None
             if selected_mode_key == "Workflow A":
-                st.session_state.source_type = "clean_upload" if st.session_state.primary_file_hash else "synthetic"
-                st.session_state.reference_audio = (
-                    st.session_state.audio_data.copy() if st.session_state.audio_data is not None else None
-                )
+                if st.session_state.source_type in ("synthetic", "clean_upload"):
+                    st.session_state.reference_audio = (
+                        st.session_state.audio_data.copy() if st.session_state.audio_data is not None else None
+                    )
+                else:
+                    # Degraded audio from Workflow B must NOT be treated as clean ground truth
+                    st.session_state.reference_audio = None
             else:
-                st.session_state.source_type = "noisy_upload"
                 st.session_state.reference_audio = None
             st.rerun()
 
@@ -271,6 +293,7 @@ if workspace.startswith("1"):
                     st.session_state.sample_rate = in_sr
                     st.session_state.primary_file_hash = f_hash
                     st.session_state.ref_file_hash = None  # Clear any stale reference
+                    st.session_state.ref_primary_hash = None
                     st.session_state.noise_component = None
 
                     if selected_mode_key == "Workflow A":
@@ -287,6 +310,49 @@ if workspace.startswith("1"):
                         st.success(f"Loaded new Real-World Degraded audio ({in_sr:,} Hz, shape: {data.shape})")
                 except Exception as e:
                     st.error(f"Failed to load audio file: {e}")
+        elif uploaded_file is None and st.session_state.primary_file_hash is not None:
+            # Primary upload removed: reset to default synthetic demo
+            st.session_state.primary_file_hash = None
+            st.session_state.ref_file_hash = None
+            st.session_state.ref_primary_hash = None
+            st.session_state.noise_component = None
+            sr_demo = 44100
+            t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
+            demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
+            demo_signal = pre_mod.normalize_audio(demo_signal, target_peak=0.8)
+            st.session_state.audio_data = demo_signal
+            st.session_state.sample_rate = sr_demo
+            st.session_state.source_type = "synthetic"
+            if selected_mode_key == "Workflow A":
+                st.session_state.reference_audio = demo_signal.copy()
+                st.session_state.noisy_audio = demo_signal.copy()
+            else:
+                st.session_state.reference_audio = None
+                st.session_state.noisy_audio = demo_signal.copy()
+            st.rerun()
+
+        if selected_mode_key == "Workflow A" and st.session_state.source_type == "noisy_upload":
+            st.warning(
+                "⚠️ **Clean Ground Truth Required:** The currently loaded recording was ingested as "
+                "real-world degraded audio (Workflow B). Workflow A requires a verified clean recording. "
+                "Please upload a clean audio recording above or reset to the synthetic clean demo tone."
+            )
+            if st.button("Reset to Synthetic Clean Demo Tone", key="btn_reset_demo_workflow_a"):
+                sr_demo = 44100
+                t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
+                demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
+                demo_signal = pre_mod.normalize_audio(demo_signal, target_peak=0.8)
+                st.session_state.audio_data = demo_signal
+                st.session_state.sample_rate = sr_demo
+                st.session_state.source_type = "synthetic"
+                st.session_state.reference_audio = demo_signal.copy()
+                st.session_state.noisy_audio = demo_signal.copy()
+                st.session_state.noise_component = None
+                st.session_state.primary_file_hash = None
+                st.session_state.ref_file_hash = None
+                st.session_state.ref_primary_hash = None
+                st.success("Reset to synthetic clean demo signal.")
+                st.rerun()
 
         # Optional separate clean reference for Workflow B
         if selected_mode_key == "Workflow B":
@@ -297,24 +363,42 @@ if workspace.startswith("1"):
                 "the user must ensure the reference is aligned."
             )
             ref_file = st.file_uploader("Upload Reference Audio (.wav)", type=["wav"], key="ref_uploader")
-            if ref_file is not None:
+            if ref_file is None:
+                if st.session_state.ref_file_hash is not None:
+                    st.session_state.reference_audio = None
+                    st.session_state.ref_file_hash = None
+                    st.session_state.ref_primary_hash = None
+                    st.info("External reference removed. Switched to no-reference evaluation.")
+            else:
+                current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
                 r_bytes = ref_file.getvalue()
                 r_hash = compute_file_hash(r_bytes)
-                if r_hash != st.session_state.ref_file_hash:
+                if r_hash != st.session_state.ref_file_hash or st.session_state.ref_primary_hash != current_primary_hash:
                     try:
                         r_buf = io.BytesIO(r_bytes)
                         ref_data, ref_sr = sf.read(r_buf, dtype="float64")
+                        target_noisy = (
+                            st.session_state.noisy_audio
+                            if st.session_state.noisy_audio is not None
+                            else st.session_state.audio_data
+                        )
                         valid, msg = validate_reference_match(
-                            ref_data, ref_sr, st.session_state.noisy_audio, st.session_state.sample_rate
+                            ref_data, ref_sr, target_noisy, st.session_state.sample_rate
                         )
                         if valid:
                             st.session_state.reference_audio = ref_data
                             st.session_state.ref_file_hash = r_hash
+                            st.session_state.ref_primary_hash = current_primary_hash
                             st.success("Clean reference attached! Workflow A objective metrics enabled.")
                         else:
+                            st.session_state.reference_audio = None
                             st.session_state.ref_file_hash = None
+                            st.session_state.ref_primary_hash = None
                             st.error(f"Reference rejected: {msg}")
                     except Exception as e:
+                        st.session_state.reference_audio = None
+                        st.session_state.ref_file_hash = None
+                        st.session_state.ref_primary_hash = None
                         st.error(f"Failed to load reference: {e}")
 
     with col_up2:
@@ -942,7 +1026,7 @@ elif workspace.startswith("5"):
                     if comp_success:
                         st.markdown("### 📊 Benchmark Results Table")
 
-                        speedup_str = f"{report.speedup_ratio:.2f}x" if report.speedup_ratio > 0 else "N/A"
+                        speedup_str = format_speedup(report.speedup_ratio)
                         summary_md = f"""
 | Metric / Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Delta / Comparison |
 | :--- | :--- | :--- | :--- |
@@ -950,7 +1034,7 @@ elif workspace.startswith("5"):
 | **Evaluation Interval** | `{report.evaluation_interval}` | `{report.evaluation_interval}` | Valid Sample Alignment |
 | **Output SNR (dB)** | **{report.fir_metrics.output_snr_db:.2f} dB** | **{report.iir_metrics.output_snr_db:.2f} dB** | {report.fir_metrics.output_snr_db - report.iir_metrics.output_snr_db:+.2f} dB |
 | **SNR Improvement (Delta SNR)** | **{report.fir_metrics.snr_improvement_db:+.2f} dB** | **{report.iir_metrics.snr_improvement_db:+.2f} dB** | {report.fir_metrics.snr_improvement_db - report.iir_metrics.snr_improvement_db:+.2f} dB |
-| **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.fir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
+| **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.iir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
 | **RMSE Reduction (%)** | **{report.fir_metrics.rmse_reduction_percent:.2f}%** | **{report.iir_metrics.rmse_reduction_percent:.2f}%** | {report.fir_metrics.rmse_reduction_percent - report.iir_metrics.rmse_reduction_percent:+.2f}% |
 | **Mean Absolute Error (MAE)** | `{report.fir_metrics.mae:.4f}` | `{report.iir_metrics.mae:.4f}` | {report.fir_metrics.mae - report.iir_metrics.mae:+.4f} |
 | **Median Execution Time** | `{report.fir_metrics.execution_time_ms:.3f} ms` | `{report.iir_metrics.execution_time_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
@@ -980,7 +1064,7 @@ elif workspace.startswith("5"):
                         fir_ms = t_fir["median_ms"]
                         iir_ms = t_iir["median_ms"]
                         speedup_val = fir_ms / iir_ms if iir_ms > 0 else None
-                        speedup_str = f"{speedup_val:.2f}x" if speedup_val is not None else "N/A"
+                        speedup_str = format_speedup(speedup_val)
 
                         phase_note_fir = "Linear Phase (Group delay tau = (M-1)/2)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
                         phase_note_iir = "Non-linear Phase (Frequency-dependent group delay)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"

@@ -1,4 +1,4 @@
-﻿# AudioClean DSP — Final Project Delivery and Engineering Closure Report
+# AudioClean DSP — Final Project Delivery and Engineering Closure Report
 
 ## 1. Project Identification and Context
 - **Project Title:** AudioClean DSP — Digital Audio Noise Removal and Comparative Performance Analysis Using FIR and IIR Digital Filters
@@ -40,6 +40,15 @@
 4. **Spectrogram Crashes on Short Recordings:**
    - *Problem:* Fixed `nperseg` caused SciPy `ValueError` on short audio recordings.
    - *Fix:* Dynamically constrained available `nperseg` options to signal length, displaying a graceful warning if audio is under 256 samples.
+5. **Workflow A / Workflow B Provenance Leakage:**
+   - *Problem:* Switching from Workflow B to Workflow A copied degraded audio into `reference_audio`, treating it as clean ground truth.
+   - *Fix:* Enforced provenance tracking in `st.session_state.source_type`; switching to Workflow A only restores `reference_audio` if provenance is synthetic or clean upload. Degraded audio leaves `reference_audio = None` with a warning banner and reset-to-clean button.
+6. **Stale External Reference Lifecycle:**
+   - *Problem:* Replacing a primary recording or clearing the reference uploader left stale reference audio attached.
+   - *Fix:* Tied references to primary recording SHA-256 fingerprint (`ref_primary_hash`). Detached reference on primary replacement, removal, same-shape mismatch, or invalid upload.
+7. **Unsafe Speedup Ratio Formatting:**
+   - *Problem:* Evaluating `report.speedup_ratio > 0` raised `TypeError` when `speedup_ratio` was `None`.
+   - *Fix:* Added `format_speedup()` helper returning `"N/A"` for None, non-finite, and non-positive numbers without throwing exceptions. Fixed repeated FIR metrics in benchmark comparison table.
 
 ---
 
@@ -47,27 +56,28 @@
 
 ### 4.1 Automated Pytest Regression Suite
 - **Command:** `.\.venv\Scripts\python.exe -m pytest -v tests`
-- **Total Tests Collected:** 139
-- **Passed Tests:** 139 (100%)
+- **Total Tests Collected:** 149
+- **Passed Tests:** 149 (100%)
 - **Failed Tests:** 0
 - **Skipped Tests:** 0
-- **Duration:** 6.79 seconds
-- **Exit Code:** 0
+- **Exit Code:** 0 (Clean Pass)
 
 ### 4.2 Module Breakdown (Exact Counts):
-- `tests/test_audio_io.py`: 12 tests
-- `tests/test_preprocessing.py`: 13 tests
-- `tests/test_noise_generator.py`: 7 tests
-- `tests/test_fir_filters.py`: 20 tests (including parametrized topologies and windows)
-- `tests/test_iir_filters.py`: 23 tests (including parametrized topologies and SOS padding)
+- `tests/test_app.py`: 20 tests (UI contracts, state persistence, workflow provenance, reference lifecycle, speedup formatting, and AppTest multi-workspace navigation)
+- `tests/test_audio_io.py`: 9 tests
+- `tests/test_comparison.py`: 9 tests
 - `tests/test_fft_analysis.py`: 15 tests
-- `tests/test_metrics.py`: 20 tests
-- `tests/test_comparison.py`: 8 tests
+- `tests/test_fir_filters.py`: 21 tests (including parametrized topologies and windows)
+- `tests/test_iir_filters.py`: 23 tests (including parametrized topologies and SOS padding)
 - `tests/test_integration.py`: 2 tests
-- `tests/test_app.py`: 10 tests (including interactive `streamlit.testing.v1.AppTest` session state persistence)
+- `tests/test_metrics.py`: 21 tests
+- `tests/test_noise_generator.py`: 7 tests
+- `tests/test_preprocessing.py`: 14 tests
+- `tests/test_visualization.py`: 8 tests
 
-### 4.3 Reproducible Numerical Verification
+### 4.3 Reproducible Numerical Verification & Benchmarking
 - Executed `scripts/verify_audit_remediation.py`: All 6 numerical verification experiments passed cleanly.
+- Executed permanent benchmark script `scripts/benchmark_performance.py`: Standardized 30-trial benchmark across 1s, 5s, 30s, and 60s signal durations verified.
 
 ---
 

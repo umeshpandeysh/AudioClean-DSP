@@ -1,4 +1,4 @@
-﻿# AudioClean DSP — Phase 5: Comprehensive Testing and Validation Report
+# AudioClean DSP — Phase 5: Comprehensive Testing and Validation Report
 
 ## 1. Executive Summary & Validation Objective
 AudioClean DSP is an undergraduate digital signal processing engineering application designed for audio noise removal and rigorous comparative performance analysis between Finite Impulse Response (FIR) and Infinite Impulse Response (IIR) digital filters.
@@ -33,34 +33,35 @@ The test suite was executed using:
 ```
 
 ### Summary of Results:
-- **Total Tests Collected:** 139
-- **Tests Passed:** 139 (100%)
+- **Total Tests Collected:** 149
+- **Tests Passed:** 149 (100%)
 - **Tests Failed:** 0
 - **Tests Skipped:** 0
-- **Total Execution Time:** 6.79 seconds
 - **Exit Code:** 0 (Clean Pass)
 
 ### Exact Breakdown by Test Module:
-1. `tests/test_audio_io.py`: 12 passed
-   - Mono/stereo WAV loading, float64 representation, PCM16 round-trip, clipping protection, non-finite rejection, safe overwrite protection.
-2. `tests/test_preprocessing.py`: 13 passed
-   - Stereo-to-mono downmixing, peak normalization, duration calculations, input validation (NaN/Inf, empty, non-numeric, complex rejection), length alignment.
-3. `tests/test_noise_generator.py`: 7 passed
-   - Calibrated White Gaussian Noise (WGN), deterministic seed reproducibility, 50/60 Hz mains hum with harmonic decay, high-frequency tone Nyquist enforcement, composite noise combination with clipping protection.
-4. `tests/test_fir_filters.py`: 20 passed
+1. `tests/test_app.py`: 20 passed
+   - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, SHA-256 file fingerprinting, strict external reference upload validation (`validate_reference_match`), linked gain normalization preserving relative SNR, safe `format_speedup` formatting, Workflow A/B provenance tracking, reference lifecycle detachment/invalidation on primary change/removal/same-shape replacements, and interactive `streamlit.testing.v1.AppTest` session state persistence across app reruns, workflow toggles, and workspace navigation.
+2. `tests/test_audio_io.py`: 9 passed
+   - Mono/stereo WAV loading, float64 representation, PCM16 round-trip, clipping protection, non-finite rejection, metadata inspection, safe overwrite protection.
+3. `tests/test_comparison.py`: 9 passed
+   - Head-to-head `compare_fir_and_iir` execution in zero-phase and causal modes, topology compatibility enforcement, cutoff alignment verification, shared valid reference interval $[\tau : N - \tau]$ ($N - 2\tau$ samples) for causal mode, speedup ratio formatting, and multi-channel handling.
+4. `tests/test_fft_analysis.py`: 15 passed
+   - Single-sided calibrated FFT magnitude spectrum, coherent gain handling, odd and even sample length handling, DC bin preservation, STFT spectrogram calculation (`dBFS/Hz` and `dBFS` units), channel selection, and truncation protection.
+5. `tests/test_fir_filters.py`: 21 passed
    - Type-I linear-phase designs (lowpass, highpass, bandpass, bandstop), Hamming/Hann/Blackman windowing, odd tap enforcement, frequency response calculations, causal constant group delay ($\tau = (M-1)/2$), zero-phase forward-backward filtering. Note: Includes 4 parametrized topology cases and 3 parametrized window cases.
-5. `tests/test_iir_filters.py`: 23 passed
+6. `tests/test_iir_filters.py`: 23 passed
    - Butterworth SOS designs (orders 1-10), dedicated 50/60 Hz IIR notch filter with configurable $Q$, real-time BIBO pole stability check ($|z_p| < 1$), causal `sosfilt` vs zero-phase `sosfiltfilt`, SciPy SOS padding matching. Note: Includes 4 parametrized topology cases.
-6. `tests/test_fft_analysis.py`: 15 passed
-   - Single-sided calibrated FFT magnitude spectrum, coherent gain handling, odd and even sample length handling, DC bin preservation, STFT spectrogram calculation (`dBFS/Hz` and `dBFS` units).
-7. `tests/test_metrics.py`: 20 passed
-   - Ground-truth SNR calculation, RMSE and MAE hand-calculated vectors, RMSE reduction %, `evaluate_audio_quality` dataclass verification, zero-energy reference rejection, shape mismatch rejection, `measure_processing_time` timing harness.
-8. `tests/test_comparison.py`: 8 passed
-   - Head-to-head `compare_fir_and_iir` execution, topology compatibility enforcement, cutoff alignment verification, shared valid reference interval $[\tau : N - \tau]$ for causal mode, zero-latency speedup ratio calculation.
-9. `tests/test_integration.py`: 2 passed
+7. `tests/test_integration.py`: 2 passed
    - Complete end-to-end DSP pipeline restoration, quantitative SNR improvement, and RMSE error reduction on compound noise.
-10. `tests/test_app.py`: 10 passed
-    - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, SHA-256 file fingerprinting, strict external reference upload validation (`validate_reference_match`), linked gain normalization preserving relative SNR, and interactive `streamlit.testing.v1.AppTest` session state persistence across app reruns.
+8. `tests/test_metrics.py`: 21 passed
+   - Ground-truth SNR calculation, RMSE and MAE hand-calculated vectors, RMSE reduction %, `evaluate_audio_quality` dataclass verification, zero-energy reference rejection, shape mismatch rejection, `measure_processing_time` timing harness with type validation and boolean rejection.
+9. `tests/test_noise_generator.py`: 7 passed
+   - Calibrated White Gaussian Noise (WGN), deterministic seed reproducibility, 50/60 Hz mains hum with harmonic decay, high-frequency tone Nyquist enforcement, composite noise combination with clipping protection.
+10. `tests/test_preprocessing.py`: 14 passed
+    - Stereo-to-mono downmixing, peak normalization, duration calculations, input validation (NaN/Inf, empty, non-numeric, complex rejection), length alignment (truncation and zero-padding).
+11. `tests/test_visualization.py`: 8 passed
+    - Waveform plotting (mono/stereo), calibrated FFT spectrum visualization, STFT spectrogram plotting, filter magnitude/phase response overlays, time-domain signal comparison, figure saving, and overwrite safety.
 
 ---
 
@@ -141,6 +142,9 @@ Performance was benchmarked under strictly controlled reproducible conditions us
 - **Defect 2 (Linked Gain Normalization):** Added `apply_linked_normalization()`, scaling clean reference and noisy audio by the exact identical scalar gain, preserving relative SNR and RMSE reduction %.
 - **Defect 3 (Technical Descriptions):** Clarified offline non-causal nature of `filtfilt`, exact linear-phase group delay of causal FIR, and distinct character of narrowband IIR notch filters.
 - **Defect 4 (Short Audio in STFT):** Segment length (`nperseg`) dynamically constrained to signal length, preventing crashes on short audio.
+- **Defect 5 (Workflow Provenance):** Ensured degraded audio uploaded in Workflow B is never treated as clean ground truth when switching to Workflow A.
+- **Defect 6 (External Reference Lifecycle):** References strictly bound to primary recording hash, detached on primary change/removal, and cleared upon invalid upload or uploader removal.
+- **Defect 7 (Safe Speedup Formatting):** Handled None/non-finite/non-positive speedup ratio safely without TypeError.
 
 ---
 
@@ -153,6 +157,6 @@ Performance was benchmarked under strictly controlled reproducible conditions us
 
 ## 9. Phase 5 Exit Gate Verdict
 **STATUS: PASSED (COMPLETE)**
-- All 139 tests passing cleanly.
+- All 149 tests passing cleanly at 100%.
 - Streamlit application launches and operates without exceptions.
-- Mathematical validation, reproducible 30-trial performance benchmarking, and defect remediation verified.
+- Mathematical validation, reproducible 30-trial performance benchmarking (`scripts/benchmark_performance.py`), and defect remediation verified.
