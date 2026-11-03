@@ -129,6 +129,27 @@ st.markdown(
     .ac-pipeline-step.is-active .ac-pipeline-index {background:#2563eb;color:#fff;box-shadow:0 3px 9px rgba(37,99,235,.2);}
     .ac-pipeline-name {font-size:.76rem;font-weight:750;color:#34445c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .ac-pipeline-step.is-active .ac-pipeline-name {color:#1d4ed8;}
+    /* Refined interaction layer: lightweight CSS only, no signal or session-state changes. */
+    .stApp {background-image:radial-gradient(ellipse at 8% 0%,rgba(191,219,254,.28),transparent 34%),radial-gradient(ellipse at 94% 8%,rgba(186,230,253,.22),transparent 30%);}
+    .ac-topbar {position:relative;isolation:isolate;}
+    .ac-topbar:after {content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,#93c5fd 22%,#38bdf8 50%,#93c5fd 78%,transparent);transform:scaleX(.35);transform-origin:center;animation:ac-line-reveal 1.1s ease-out .15s both;z-index:-1;}
+    .ac-brand-mark {transition:transform .25s ease,box-shadow .25s ease;}
+    .ac-brand-mark:hover {transform:rotate(-5deg) scale(1.06);box-shadow:0 8px 20px rgba(37,99,235,.28);}
+    .ac-page-title {background:linear-gradient(100deg,#14243b 0%,#1d4ed8 58%,#0e7490 100%);background-clip:text;-webkit-background-clip:text;color:transparent;}
+    .ac-lab-ribbon {display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:-.55rem 0 1.1rem;padding:.62rem .78rem;background:linear-gradient(100deg,rgba(239,246,255,.9),rgba(255,255,255,.94));border:1px solid #dce8f7;border-radius:12px;}
+    .ac-ribbon-item {display:inline-flex;align-items:center;gap:.42rem;color:#52647c;font-size:.72rem;font-weight:700;letter-spacing:.01em;}
+    .ac-ribbon-dot {width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.12);}
+    .ac-ribbon-sep {color:#9aabc0;font-size:.8rem;margin:0 .1rem;}
+    .ac-status-card:after {content:"";position:absolute;right:-22px;top:-28px;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle,rgba(191,219,254,.28),transparent 68%);pointer-events:none;transition:transform .3s ease;}
+    .ac-status-card:hover:after {transform:scale(1.45);}
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {transform:translateY(-1px);}
+    [data-testid="stExpander"] {transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;}
+    [data-testid="stExpander"]:hover {border-color:#c5d8f1;box-shadow:0 5px 16px rgba(20,40,70,.045);}
+    .stTextInput input:focus,.stNumberInput input:focus,.stSelectbox [role="combobox"]:focus,.stTextArea textarea:focus {border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.12);}
+    .stButton>button:focus-visible,.stDownloadButton>button:focus-visible {outline:3px solid rgba(59,130,246,.28);outline-offset:2px;}
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {background:linear-gradient(100deg,rgba(37,99,235,.3),rgba(14,165,233,.13));border-color:rgba(125,211,252,.65);box-shadow:inset 3px 0 0 #38bdf8;}
+    [data-testid="stAudio"] audio {width:100%;}
+    @keyframes ac-line-reveal {from{transform:scaleX(.15);opacity:.25;}to{transform:scaleX(1);opacity:1;}}
     @keyframes ac-wave {from{transform:scaleY(.35);opacity:.65;}to{transform:scaleY(1);opacity:1;}}
     @keyframes ac-pulse {0%{box-shadow:0 0 0 0 rgba(22,163,74,.32);}70%{box-shadow:0 0 0 7px rgba(22,163,74,0);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
     @keyframes ac-sheen {0%,65%{transform:translateX(-120%);}85%,100%{transform:translateX(120%);}}
@@ -452,6 +473,19 @@ pipeline_html = "".join(
     for step_id, number, label in pipeline_steps
 )
 st.markdown(f'<div class="ac-pipeline" aria-label="DSP workflow overview">{pipeline_html}</div>', unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="ac-lab-ribbon" aria-label="AudioClean processing capabilities">
+      <span class="ac-ribbon-item"><span class="ac-ribbon-dot"></span>Signal preparation</span>
+      <span class="ac-ribbon-sep">/</span>
+      <span class="ac-ribbon-item"><span class="ac-ribbon-dot"></span>Digital filter design</span>
+      <span class="ac-ribbon-sep">/</span>
+      <span class="ac-ribbon-item"><span class="ac-ribbon-dot"></span>Measured evaluation</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =============================================================================
 # WORKSPACE 1: Audio Workspace
