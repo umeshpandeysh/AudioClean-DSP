@@ -118,11 +118,18 @@ def test_rmse_reduction_percentage_calculation():
     assert np.isclose(result.output_rmse, 0.1, atol=1e-12)
     assert np.isclose(result.rmse_reduction_percent, 75.0, atol=1e-12)
 
-    # Edge case: Noisy was already identical to reference (zero input RMSE)
+    # Edge case 1: Noisy and filtered are both identical to reference (zero input RMSE, zero output RMSE)
     res_zero = evaluate_audio_quality(ref, ref.copy(), ref.copy())
     assert res_zero.input_rmse == 0.0
     assert res_zero.output_rmse == 0.0
     assert res_zero.rmse_reduction_percent == 0.0
+
+    # Edge case 2: Noisy was identical to reference (input RMSE == 0), but filtering introduced error (output RMSE > 0)
+    # Error increased from 0 to positive, so reduction is negative infinity
+    res_degraded_from_clean = evaluate_audio_quality(ref, ref.copy(), filtered)
+    assert res_degraded_from_clean.input_rmse == 0.0
+    assert res_degraded_from_clean.output_rmse > 0.0
+    assert res_degraded_from_clean.rmse_reduction_percent == float("-inf")
 
 
 def test_evaluate_audio_quality_structure_and_values():

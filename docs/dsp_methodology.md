@@ -337,7 +337,7 @@ $$\text{PSD}_{\text{dB}}[m, k] = 10 \log_{10} \left( \max(|X[m, k]|^2, 10^{-15})
   Choosing a shorter segment length (`nperseg`) improves temporal resolution (precise onset timing) at the expense of frequency resolution (broader spectral peaks). Conversely, larger `nperseg` resolves close harmonic overtones but smears temporal transients.
 ---
 
-## 10. Quantitative Performance Evaluation (Phase 6)
+## 10. Quantitative Performance Evaluation & Comparative Analysis (Phase 3 DSP Analysis)
 
 ### 1. Objective Metrics Formulations
 
@@ -364,6 +364,12 @@ $$\text{RMSE} = \sqrt{\frac{1}{N} \sum_{n=0}^{N-1} (s_{\text{clean}}[n] - s_{\te
 
 $$\text{RMSE Reduction (\%)} = \left(\frac{\text{RMSE}_{\text{input}} - \text{RMSE}_{\text{output}}}{\text{RMSE}_{\text{input}}}\right) \times 100\%$$
 
+**Boundary & Edge Case Formulations:**
+- **Zero Input and Output Error ($\text{RMSE}_{\text{input}} = 0$, $\text{RMSE}_{\text{output}} = 0$):**
+  When both degraded and restored signals perfectly match the clean reference, error was initially zero and remained zero. The percentage reduction is defined as $0.0\%$.
+- **Zero Input Error with Non-Zero Output Error ($\text{RMSE}_{\text{input}} = 0$, $\text{RMSE}_{\text{output}} > 0$):**
+  When an initially uncorrupted signal is degraded by the filtering process (e.g. through stopband attenuation of desired harmonics or group delay transients), error increases from zero to a positive magnitude. The relative reduction is mathematically undefined with standard division by zero, representing an infinite percentage degradation. AudioClean DSP explicitly and mathematically defensibly reports $-\infty\%$ (`float('-inf')`).
+
 #### D. Mean Absolute Error (MAE)
 $$\text{MAE} = \frac{1}{N} \sum_{n=0}^{N-1} |s_{\text{clean}}[n] - s_{\text{eval}}[n]|$$
 
@@ -378,7 +384,23 @@ Objective metrics like SNR, RMSE, and MAE **cannot** be computed from a single n
 Reference-based error metrics are exquisitely sensitive to phase alignment:
 - An unfiltered clean signal delayed by even a few milliseconds relative to itself can yield an SNR below $0\text{ dB}$ due to destructive waveform cancellation:
   $$e[n] = s[n] - s[n - \tau]$$
-- Therefore, objective comparative benchmarks in AudioClean DSP employ **zero-phase forward-backward filtering** (`filtfilt` / `sosfiltfilt`) to preserve exact sample alignment ($t=0$ group delay) when calculating SNR, RMSE, and MAE.
+
+**Evaluation Modes:**
+1. **Zero-Phase Forward-Backward Filtering (`mode="zero_phase"`):**
+   - Implemented via `scipy.signal.filtfilt` (FIR) and `scipy.signal.sosfiltfilt` (IIR).
+   - Filters the signal forward and in reverse, doubling the attenuation slope while canceling phase shifts identically ($\phi(\omega) = 0$, $\tau(\omega) = 0$).
+   - Preserves exact sample-by-sample alignment across the full $N$-sample duration, enabling direct reference comparison across $n \in [0, N-1]$.
+
+2. **Causal Filtering & Boundary Alignment (`mode="causal"`):**
+   - **FIR Linear-Phase Group Delay:** A Type-I symmetric FIR filter of length $M$ introduces a constant, frequency-independent integer delay:
+     $$\tau = \frac{M - 1}{2} \text{ samples}$$
+     In causal mode (`scipy.signal.lfilter`), the filter output contains an initial startup transient of $\tau$ samples before entering valid steady-state operation. The valid output samples $s_{\text{filtered}}[n]$ for $n \in [\tau, N-1]$ correspond strictly to reference samples $s_{\text{clean}}[n - \tau]$ for $n - \tau \in [0, N - 1 - \tau]$.
+   - **Boundary Exclusion & Sample Correspondence Interval:**
+     To evaluate causal FIR filtering objectively without penalizing the filter for group delay latency or startup boundary zeros, the aligned FIR slice $s_{\text{filtered}}[\tau : N]$ is compared against the clean reference slice $s_{\text{clean}}[0 : N - \tau]$.
+     To ensure rigorous, mathematically valid comparison, the noisy-input baseline and comparative causal IIR output are evaluated over the **exact same interval** $[0, N - \tau]$ containing $N - \tau$ samples.
+     Full length-$N$ filtered signals are preserved and returned to callers.
+   - **IIR Nonlinear Phase:**
+     Causal IIR filters (`scipy.signal.sosfilt`) do not possess linear phase; their group delay $\tau(\omega) = -d\phi(\omega)/d\omega$ varies with frequency. Different spectral components experience differential time delays, producing waveform dispersion. In causal comparative evaluation over $[0, N - \tau]$, IIR metrics reflect this physical phase distortion.
 
 #### 3. Multichannel Energy Aggregation vs. Decibel Averaging
 For stereo signals ($C = 2$):

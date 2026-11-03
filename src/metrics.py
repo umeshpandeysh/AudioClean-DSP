@@ -367,7 +367,8 @@ class AudioEvaluationResult:
         Root Mean Square Error of filtered output relative to clean reference.
     rmse_reduction_percent : float
         Percentage reduction in RMSE: ((input_rmse - output_rmse) / input_rmse) * 100.
-        If input_rmse == 0.0, rmse_reduction_percent is safely defined as 0.0.
+        If input_rmse == 0.0 and output_rmse == 0.0, defined as 0.0%.
+        If input_rmse == 0.0 and output_rmse > 0.0, defined as float('-inf').
     input_mae : float
         Mean Absolute Error of noisy input relative to clean reference.
     output_mae : float
@@ -450,8 +451,11 @@ def evaluate_audio_quality(
     # 2. RMSE Metrics
     in_rmse = calculate_rmse(ref_f64, noisy_f64)
     out_rmse = calculate_rmse(ref_f64, filt_f64)
-    if in_rmse == 0.0:
+    if in_rmse == 0.0 and out_rmse == 0.0:
         rmse_reduction = 0.0
+    elif in_rmse == 0.0 and out_rmse > 0.0:
+        # Error increased from zero to positive; reduction is negative infinity
+        rmse_reduction = float("-inf")
     else:
         rmse_reduction = float(((in_rmse - out_rmse) / in_rmse) * 100.0)
 

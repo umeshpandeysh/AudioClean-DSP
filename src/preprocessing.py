@@ -35,6 +35,18 @@ def validate_audio(data: np.ndarray, sample_rate: int) -> bool:
     if not isinstance(data, np.ndarray):
         raise TypeError(f"Audio data must be a numpy.ndarray, got {type(data).__name__}.")
 
+    # Reject complex types explicitly
+    if np.iscomplexobj(data):
+        raise TypeError("Audio data contains complex values; audio signals must be real-valued.")
+
+    # Reject boolean arrays explicitly
+    if data.dtype == bool:
+        raise TypeError("Audio data has boolean dtype; expected real numeric audio samples.")
+
+    # Validate numeric dtype
+    if not np.issubdtype(data.dtype, np.number):
+        raise TypeError(f"Audio data has non-numeric dtype '{data.dtype}'. Expected numeric data.")
+
     if not isinstance(sample_rate, (int, np.integer)):
         raise TypeError(f"Sample rate must be an integer, got {type(sample_rate).__name__}.")
 

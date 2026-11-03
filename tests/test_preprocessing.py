@@ -111,6 +111,24 @@ def test_validate_audio_invalid_sample_rate():
         validate_audio(data, "44100")  # type: ignore
 
 
+def test_validate_audio_complex_and_non_numeric():
+    """Verify validate_audio rejects complex, boolean, and non-numeric arrays."""
+    # Complex
+    complex_data = np.array([1.0 + 0.1j, 2.0 - 0.2j])
+    with pytest.raises(TypeError, match="complex values"):
+        validate_audio(complex_data, 44100)
+
+    # Boolean
+    bool_data = np.array([True, False, True])
+    with pytest.raises(TypeError, match="boolean dtype"):
+        validate_audio(bool_data, 44100)
+
+    # Object / String
+    str_data = np.array(["0.1", "0.2"], dtype=object)
+    with pytest.raises(TypeError, match="non-numeric"):
+        validate_audio(str_data, 44100)
+
+
 def test_calculate_duration():
     """Verify duration formula T = N / fs."""
     assert np.isclose(calculate_duration(44100, 44100), 1.0)
