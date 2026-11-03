@@ -66,7 +66,7 @@
 - `measure_processing_time(func, *args, num_trials, warm_up_runs, **kwargs)`: High-resolution isolated latency benchmarking reporting median, mean, standard deviation, and range.
 
 ### Module 9: Comparative Evaluation Engine (`src/comparison.py`)
-- `compare_fir_and_iir(clean_reference, noisy_signal, fir_design, iir_design, mode, num_trials)`: Comprehensive head-to-head evaluation enforcing filter compatibility, exact linear-phase group delay alignment over valid $[0, N-\tau]$ sample correspondence intervals, speedup ratios, and frequency response extraction.
+- `compare_fir_and_iir(clean_reference, noisy_signal, fir_design, iir_design, mode, num_trials)`: Comprehensive head-to-head evaluation enforcing filter compatibility, exact linear-phase group delay alignment over shared valid reference interval $[\tau, N - \tau]$ ($N - 2\tau$ samples), speedup ratios, and frequency response grid validation.
 - `align_causal_signal(signal, delay_samples)`: Causal FIR group delay compensation and boundary alignment.
 
 ---
@@ -108,7 +108,7 @@ fig = plot_signal_comparison(
 
 ## 5. Automated Testing & Verification
 
-Run the comprehensive test suite (all 126 tests across 9 test modules):
+Run the comprehensive test suite (all 129 tests across 9 test modules):
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v tests
 ```

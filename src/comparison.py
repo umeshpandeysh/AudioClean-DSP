@@ -134,9 +134,10 @@ class FilterComparisonReport:
     mode : str
         Execution mode ('zero_phase' or 'causal').
     evaluation_interval : Tuple[int, int]
-        Sample index range [start_idx, end_idx) over which objective metrics were evaluated.
+        Sample index range [start_idx, end_idx) in reference signal coordinates over which objective
+        metrics were evaluated: (0, N) in zero-phase mode, (tau, N - tau) in causal mode.
     evaluation_sample_count : int
-        Number of valid evaluation samples (excluding filter boundary startup/tail).
+        Number of valid evaluation samples: N in zero-phase mode, N - 2*tau in causal mode.
     fir_benchmark : SingleFilterBenchmark
         Benchmark results for the FIR filter.
     iir_benchmark : SingleFilterBenchmark
@@ -167,6 +168,20 @@ class FilterComparisonReport:
         return asdict(self)
 
 
+CUTOFF_TOLERANCE_HZ: float = 1e-3
+CUTOFF_REL_TOL: float = 1e-5
+
+
+def _is_close(
+    val1: Union[int, float, np.floating],
+    val2: Union[int, float, np.floating],
+    atol: float = CUTOFF_TOLERANCE_HZ,
+    rtol: float = CUTOFF_REL_TOL,
+) -> bool:
+    """Check whether two cutoff frequencies are equal within documented numerical tolerance."""
+    return math.isclose(float(val1), float(val2), rel_tol=rtol, abs_tol=atol)
+
+
 def align_causal_signal(
     signal: np.ndarray,
     delay_samples: int,
@@ -177,7 +192,7 @@ def align_causal_signal(
     Parameters
     ----------
     signal : np.ndarray
-        Delayed audio signal array (1D or 2D).
+        Delayed audio signal array (1D mono or 2D stereo).
     delay_samples : int
         Number of discrete samples to shift backward. Must be integer >= 0 and strictly less
         than signal length.
@@ -190,12 +205,26 @@ def align_causal_signal(
     Raises
     ------
     TypeError
-        If signal is not an ndarray or delay_samples is not an integer (boolean rejected).
+        If signal is not an ndarray, is complex-valued, non-numeric, or boolean;
+        or if delay_samples is not an integer (boolean rejected).
     ValueError
-        If delay_samples < 0 or delay_samples >= signal length.
+        If signal is empty or has dimension other than 1D/2D, or if 2D array has > 2 channels;
+        or if delay_samples < 0 or delay_samples >= signal length.
     """
     if not isinstance(signal, np.ndarray):
         raise TypeError(f"signal must be a numpy.ndarray, got {type(signal).__name__}.")
+
+    if signal.dtype == bool or not np.issubdtype(signal.dtype, np.number) or np.iscomplexobj(signal):
+        raise TypeError(f"signal must be a numeric floating-point or integer array, got {signal.dtype}.")
+
+    if signal.ndim not in (1, 2):
+        raise ValueError(f"signal must be a 1D (mono) or 2D (stereo) array, got {signal.ndim}D array.")
+
+    if signal.ndim == 2 and signal.shape[1] not in (1, 2):
+        raise ValueError(f"2D audio signal must have 1 or 2 channels, got shape {signal.shape}.")
+
+    if signal.shape[0] == 0:
+        raise ValueError("signal cannot be empty.")
 
     if isinstance(delay_samples, bool) or not isinstance(delay_samples, (int, np.integer)):
         raise TypeError(f"delay_samples must be an integer, got {type(delay_samples).__name__}.")
@@ -203,12 +232,12 @@ def align_causal_signal(
     if delay_samples < 0:
         raise ValueError(f"delay_samples must be non-negative (>= 0), got {delay_samples}.")
 
-    if delay_samples == 0:
-        return signal.copy()
-
     n = signal.shape[0]
     if delay_samples >= n:
         raise ValueError(f"delay_samples ({delay_samples}) must be strictly less than signal length ({n}).")
+
+    if delay_samples == 0:
+        return signal.copy()
 
     aligned = np.zeros_like(signal)
     if signal.ndim == 1:
@@ -228,7 +257,28 @@ def _validate_filter_compatibility(
 ) -> int:
     """
     Validate that FIR and IIR filter designs have compatible topologies, sampling rates,
-    and band specifications for a fair scientific comparison.
+    and actual cutoff specifications for a fair scientific comparison.
+
+    Parameters
+    ----------
+    fir_design : FIRFilterDesign
+        Designed FIR filter container.
+    iir_design : IIRFilterDesign
+        Designed IIR filter container.
+    sample_rate : Optional[int]
+        Optional expected sampling rate in Hz.
+
+    Returns
+    -------
+    int
+        Validated sampling frequency in Hz.
+
+    Raises
+    ------
+    TypeError
+        If designs are not instances of their respective dataclasses or sample_rate is invalid.
+    ValueError
+        If sampling rates mismatch, topologies are incompatible, or cutoff frequencies differ.
     """
     if not isinstance(fir_design, FIRFilterDesign):
         raise TypeError(f"fir_design must be an instance of FIRFilterDesign, got {type(fir_design).__name__}.")
@@ -274,15 +324,71 @@ def _validate_filter_compatibility(
 
     # Validate cutoff configuration compatibility
     if fir_norm in ("lowpass", "highpass"):
-        if not isinstance(fir_design.cutoff_hz, (int, float, np.floating)):
+        if not isinstance(fir_design.cutoff_hz, (int, float, np.floating)) or isinstance(fir_design.cutoff_hz, bool):
             raise ValueError(f"FIR cutoff_hz must be a single scalar for {fir_norm}, got {fir_design.cutoff_hz}.")
-        if iir_design.cutoff_hz is None or not isinstance(iir_design.cutoff_hz, (int, float, np.floating)):
+        if (
+            iir_design.cutoff_hz is None
+            or not isinstance(iir_design.cutoff_hz, (int, float, np.floating))
+            or isinstance(iir_design.cutoff_hz, bool)
+        ):
             raise ValueError(f"IIR cutoff_hz must be a single scalar for {fir_norm}, got {iir_design.cutoff_hz}.")
+        if not _is_close(fir_design.cutoff_hz, iir_design.cutoff_hz):
+            raise ValueError(
+                f"Cutoff frequency mismatch for {fir_norm}: FIR cutoff is {fir_design.cutoff_hz} Hz, "
+                f"while IIR cutoff is {iir_design.cutoff_hz} Hz (tolerance: {CUTOFF_TOLERANCE_HZ} Hz)."
+            )
+
     elif fir_norm == "bandpass":
         if not (isinstance(fir_design.cutoff_hz, (tuple, list, np.ndarray)) and len(fir_design.cutoff_hz) == 2):
-            raise ValueError("FIR cutoff_hz must be a 2-element sequence for bandpass.")
+            raise ValueError("FIR cutoff_hz must be a 2-element sequence [f_low, f_high] for bandpass.")
         if not (isinstance(iir_design.cutoff_hz, (tuple, list, np.ndarray)) and len(iir_design.cutoff_hz) == 2):
-            raise ValueError("IIR cutoff_hz must be a 2-element sequence for bandpass.")
+            raise ValueError("IIR cutoff_hz must be a 2-element sequence [f_low, f_high] for bandpass.")
+        fir_f1, fir_f2 = fir_design.cutoff_hz[0], fir_design.cutoff_hz[1]
+        iir_f1, iir_f2 = iir_design.cutoff_hz[0], iir_design.cutoff_hz[1]
+        if not _is_close(fir_f1, iir_f1) or not _is_close(fir_f2, iir_f2):
+            raise ValueError(
+                f"Bandpass cutoff mismatch: FIR band edges are ({fir_f1}, {fir_f2}) Hz, "
+                f"while IIR band edges are ({iir_f1}, {iir_f2}) Hz (tolerance: {CUTOFF_TOLERANCE_HZ} Hz)."
+            )
+
+    elif fir_norm == "bandstop":
+        # Check if IIR is a notch filter
+        is_iir_notch = (iir_type == "notch") or (iir_design.design_method == "iirnotch")
+        if is_iir_notch:
+            f0 = iir_design.notch_freq
+            q = iir_design.quality_factor
+            if f0 is None or isinstance(f0, bool) or not isinstance(f0, (int, float, np.floating)) or f0 <= 0:
+                raise ValueError(f"IIR notch filter must specify positive notch_freq, got {f0}.")
+            if q is None or isinstance(q, bool) or not isinstance(q, (int, float, np.floating)) or q <= 0:
+                raise ValueError(f"IIR notch filter must specify positive quality_factor, got {q}.")
+            bw = float(f0) / float(q)
+            f_low = float(f0) - bw / 2.0
+            f_high = float(f0) + bw / 2.0
+            if not (isinstance(fir_design.cutoff_hz, (tuple, list, np.ndarray)) and len(fir_design.cutoff_hz) == 2):
+                raise ValueError(
+                    f"FIR bandstop cutoff_hz must be a 2-element sequence matching notch edges "
+                    f"({f_low:.4f}, {f_high:.4f}) Hz, got {fir_design.cutoff_hz}."
+                )
+            fir_f1, fir_f2 = fir_design.cutoff_hz[0], fir_design.cutoff_hz[1]
+            if not _is_close(fir_f1, f_low) or not _is_close(fir_f2, f_high):
+                raise ValueError(
+                    f"Notch vs FIR bandstop specification mismatch: IIR notch (f0={f0} Hz, Q={q}, "
+                    f"BW={bw:.4f} Hz) corresponds to -3 dB band edges ({f_low:.4f}, {f_high:.4f}) Hz, "
+                    f"but FIR band edges are ({fir_f1}, {fir_f2}) Hz (tolerance: {CUTOFF_TOLERANCE_HZ} Hz)."
+                )
+        else:
+            # Standard Butterworth bandstop comparison
+            if not (isinstance(fir_design.cutoff_hz, (tuple, list, np.ndarray)) and len(fir_design.cutoff_hz) == 2):
+                raise ValueError("FIR cutoff_hz must be a 2-element sequence [f_low, f_high] for bandstop.")
+            if not (isinstance(iir_design.cutoff_hz, (tuple, list, np.ndarray)) and len(iir_design.cutoff_hz) == 2):
+                raise ValueError("IIR cutoff_hz must be a 2-element sequence [f_low, f_high] for bandstop.")
+            fir_f1, fir_f2 = fir_design.cutoff_hz[0], fir_design.cutoff_hz[1]
+            iir_f1, iir_f2 = iir_design.cutoff_hz[0], iir_design.cutoff_hz[1]
+            if not _is_close(fir_f1, iir_f1) or not _is_close(fir_f2, iir_f2):
+                raise ValueError(
+                    f"Bandstop cutoff mismatch: FIR band edges are ({fir_f1}, {fir_f2}) Hz, "
+                    f"while IIR band edges are ({iir_f1}, {iir_f2}) Hz (tolerance: {CUTOFF_TOLERANCE_HZ} Hz)."
+                )
 
     return int(fs)
 
@@ -306,12 +412,12 @@ def compare_fir_and_iir(
     1. Both filters process identical input audio sampled at matching sampling rates.
     2. Causal FIR introduces an exact constant group delay tau = (numtaps - 1) / 2 samples.
        To eliminate transient startup effects and artificial phase-cancellation degradation,
-       the reference comparison evaluates the steady-state interval:
-         - Aligned FIR output segment: fir_output[tau : N]
-         - Corresponding clean reference segment: reference[0 : N - tau]
-         - Baseline noisy input segment: noisy_signal[0 : N - tau]
-         - IIR output segment evaluated over the EXACT same interval [0 : N - tau] to ensure
-           a strictly fair, identical time duration and identical clean reference basis.
+       the reference comparison evaluates the shared steady-state reference interval [tau : N - tau]:
+         - Aligned FIR output segment: fir_output[2*tau : N]
+         - Corresponding clean reference segment: reference[tau : N - tau]
+         - Baseline noisy input segment: noisy_signal[tau : N - tau]
+         - IIR output segment: iir_output[tau : N - tau] evaluated over the EXACT same interval
+           to ensure a strictly fair, identical time duration and identical clean reference basis.
     3. Causal IIR introduces nonlinear, frequency-dependent group delay that remains an intrinsic
        part of its real-time performance.
     4. In zero-phase mode, forward-backward filtering (`filtfilt` / `sosfiltfilt`) is applied
@@ -400,22 +506,23 @@ def compare_fir_and_iir(
     tau = int(round(fir_design.group_delay_samples))
 
     if clean_mode == "causal":
-        if tau >= num_samples:
+        if num_samples <= 2 * tau:
             raise ValueError(
                 f"Signal length ({num_samples} samples) is too short to evaluate causal FIR "
-                f"with delay tau = {tau} samples."
+                f"with delay tau = {tau} samples (requires N > 2*tau = {2 * tau} samples)."
             )
-        # Evaluated clean reference segment: reference[0 : num_samples - tau]
-        # Aligned FIR output segment: fir_output[tau : num_samples]
-        # Baseline noisy input segment: noisy_signal[0 : num_samples - tau]
-        # IIR output segment: evaluated on the exact same interval [0 : num_samples - tau]
-        eval_ref = reference[: num_samples - tau]
-        eval_noisy = noisy_signal[: num_samples - tau]
-        eval_fir = fir_output[tau:]
-        eval_iir = iir_output[: num_samples - tau]
+        # Shared valid reference interval excluding FIR startup boundary (2*tau samples):
+        # eval_ref: reference[tau : num_samples - tau]
+        # eval_noisy: noisy_signal[tau : num_samples - tau]
+        # eval_fir: fir_output[2*tau : num_samples]
+        # eval_iir: iir_output[tau : num_samples - tau]
+        eval_ref = reference[tau : num_samples - tau]
+        eval_noisy = noisy_signal[tau : num_samples - tau]
+        eval_fir = fir_output[2 * tau : num_samples]
+        eval_iir = iir_output[tau : num_samples - tau]
 
-        eval_interval = (0, num_samples - tau)
-        eval_count = num_samples - tau
+        eval_interval = (tau, num_samples - tau)
+        eval_count = num_samples - 2 * tau
     else:  # zero_phase
         eval_ref = reference
         eval_noisy = noisy_signal
@@ -436,6 +543,28 @@ def compare_fir_and_iir(
     # 7. Frequency Response Evaluation across identical grid
     f_fir, mag_fir, mag_db_fir, phase_fir = get_fir_frequency_response(fir_design, worN=n_freq_points)
     f_iir, mag_iir, mag_db_iir, phase_iir = get_iir_frequency_response(iir_design, worN=n_freq_points)
+
+    if len(f_fir) != n_freq_points:
+        raise ValueError(
+            f"FIR frequency grid length ({len(f_fir)}) does not match expected length ({n_freq_points})."
+        )
+    if len(f_iir) != n_freq_points:
+        raise ValueError(
+            f"IIR frequency grid length ({len(f_iir)}) does not match expected length ({n_freq_points})."
+        )
+
+    if not np.all(np.isfinite(f_fir)):
+        raise ValueError("FIR frequency response grid contains non-finite (NaN or Inf) values.")
+    if not np.all(np.isfinite(f_iir)):
+        raise ValueError("IIR frequency response grid contains non-finite (NaN or Inf) values.")
+
+    FREQ_GRID_TOLERANCE_HZ: float = 1e-3
+    if not np.allclose(f_fir, f_iir, atol=FREQ_GRID_TOLERANCE_HZ, rtol=1e-5):
+        max_diff = float(np.max(np.abs(f_fir - f_iir)))
+        raise ValueError(
+            f"Frequency response grid mismatch between FIR and IIR: maximum absolute difference is "
+            f"{max_diff:.6e} Hz (tolerance: {FREQ_GRID_TOLERANCE_HZ} Hz)."
+        )
 
     freq_response_data = FilterFrequencyResponseData(
         frequencies_hz=f_fir,
@@ -498,9 +627,11 @@ def compare_fir_and_iir(
 
     if clean_mode == "causal":
         interval_desc = (
-            f"Evaluated over steady-state interval [0, {eval_count}) excluding FIR startup/tail delay "
-            f"tau={tau} samples ({tau/fs*1000:.2f} ms). Clean reference, noisy baseline, aligned FIR, "
-            f"and IIR are all compared over this exact same reference interval."
+            f"Evaluated over shared steady-state reference interval [{tau}, {num_samples - tau}) "
+            f"containing {eval_count} samples (N - 2*tau), strictly excluding FIR startup boundary "
+            f"(2*tau = {2*tau} samples) and group delay (tau={tau} samples, {tau/fs*1000:.2f} ms). "
+            f"Clean reference, noisy baseline, aligned FIR (fir_output[2*tau:N]), and causal IIR "
+            f"are all compared over this exact shared reference interval."
         )
     else:
         interval_desc = "Evaluated over full signal duration with zero-phase filtering."

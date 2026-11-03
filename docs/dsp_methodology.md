@@ -392,15 +392,18 @@ Reference-based error metrics are exquisitely sensitive to phase alignment:
    - Preserves exact sample-by-sample alignment across the full $N$-sample duration, enabling direct reference comparison across $n \in [0, N-1]$.
 
 2. **Causal Filtering & Boundary Alignment (`mode="causal"`):**
-   - **FIR Linear-Phase Group Delay:** A Type-I symmetric FIR filter of length $M$ introduces a constant, frequency-independent integer delay:
+   - **FIR Linear-Phase Group Delay & Startup Boundary:** A Type-I symmetric FIR filter of length $M$ introduces a constant, frequency-independent integer delay:
      $$\tau = \frac{M - 1}{2} \text{ samples}$$
-     In causal mode (`scipy.signal.lfilter`), the filter output contains an initial startup transient of $\tau$ samples before entering valid steady-state operation. The valid output samples $s_{\text{filtered}}[n]$ for $n \in [\tau, N-1]$ correspond strictly to reference samples $s_{\text{clean}}[n - \tau]$ for $n - \tau \in [0, N - 1 - \tau]$.
-   - **Boundary Exclusion & Sample Correspondence Interval:**
-     To evaluate causal FIR filtering objectively without penalizing the filter for group delay latency or startup boundary zeros, the aligned FIR slice $s_{\text{filtered}}[\tau : N]$ is compared against the clean reference slice $s_{\text{clean}}[0 : N - \tau]$.
-     To ensure rigorous, mathematically valid comparison, the noisy-input baseline and comparative causal IIR output are evaluated over the **exact same interval** $[0, N - \tau]$ containing $N - \tau$ samples.
-     Full length-$N$ filtered signals are preserved and returned to callers.
+     In causal mode (`scipy.signal.lfilter`), the filter state registers require an initial startup transient of $M - 1 = 2\tau$ samples before the filter memory is completely filled with actual input samples. The valid steady-state output samples $s_{\text{filtered}}[n]$ for $n \in [2\tau, N-1]$ correspond strictly to reference samples $s_{\text{clean}}[n - \tau]$ for $n - \tau \in [\tau, N - 1 - \tau]$.
+   - **Shared Valid Reference Interval:**
+     To evaluate causal FIR filtering objectively without penalizing the filter for either group delay latency or startup transient zeros, evaluation is conducted over the shared reference interval $n_{\text{ref}} \in [\tau, N - \tau)$ containing exactly $N - 2\tau$ samples:
+     - Clean reference: $s_{\text{clean}}[\tau : N - \tau]$
+     - Degraded noisy baseline: $s_{\text{noisy}}[\tau : N - \tau]$
+     - Aligned steady-state FIR output: $s_{\text{fir}}[2\tau : N]$
+     - Causal IIR output: $s_{\text{iir}}[\tau : N - \tau]$
+     All four sequences have identical length $N - 2\tau$ and are evaluated over the exact same clean reference basis. Full length-$N$ filtered signals are preserved and returned to callers.
    - **IIR Nonlinear Phase:**
-     Causal IIR filters (`scipy.signal.sosfilt`) do not possess linear phase; their group delay $\tau(\omega) = -d\phi(\omega)/d\omega$ varies with frequency. Different spectral components experience differential time delays, producing waveform dispersion. In causal comparative evaluation over $[0, N - \tau]$, IIR metrics reflect this physical phase distortion.
+     Causal IIR filters (`scipy.signal.sosfilt`) do not possess linear phase; their group delay $\tau(\omega) = -d\phi(\omega)/d\omega$ varies with frequency. Different spectral components experience differential time delays, producing waveform dispersion. In causal comparative evaluation over $[\tau, N - \tau]$, IIR metrics reflect this physical phase distortion without arbitrary integer shift compensation.
 
 #### 3. Multichannel Energy Aggregation vs. Decibel Averaging
 For stereo signals ($C = 2$):
