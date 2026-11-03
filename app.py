@@ -161,6 +161,15 @@ st.markdown(
       .ac-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
       .ac-pipeline{grid-template-columns:repeat(2,minmax(0,1fr));}
     }
+    /* Mobile-first layout: stack control/result columns before they become cramped. */
+    @media(max-width:760px) {
+      .block-container {padding-left:.85rem;padding-right:.85rem;}
+      [data-testid="stHorizontalBlock"] {flex-wrap:wrap!important;gap:.8rem!important;}
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] {flex:1 1 100%!important;min-width:100%!important;width:100%!important;}
+      [data-testid="stPlotlyChart"],[data-testid="stImage"] {width:100%!important;}
+      [data-testid="stVerticalBlockBorderWrapper"] {padding:.85rem!important;}
+      .ac-page-copy {font-size:.86rem;}
+    }
     @media(max-width:640px) {
       .block-container{padding:1rem .9rem 2rem;}
       .ac-topbar{align-items:flex-start;flex-direction:column;}
@@ -1003,7 +1012,7 @@ elif workspace.startswith("3"):
                                         f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
                                         f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
                                         f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
-                                        f"- **MAE:** `{eval_res.mae:.4f}`"
+                                        f"- **Input MAE:** `{eval_res.input_mae:.4f}` &nbsp;→&nbsp; **Output MAE:** `{eval_res.output_mae:.4f}`"
                                     )
                                 else:
                                     st.warning("Signal length is too short to evaluate causal FIR valid interval.")
@@ -1015,7 +1024,7 @@ elif workspace.startswith("3"):
                                     f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
                                     f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
                                     f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
-                                    f"- **MAE:** `{eval_res.mae:.4f}`"
+                                    f"- **Input MAE:** `{eval_res.input_mae:.4f}` &nbsp;→&nbsp; **Output MAE:** `{eval_res.output_mae:.4f}`"
                                 )
                         else:
                             st.info(
@@ -1175,7 +1184,7 @@ elif workspace.startswith("4"):
                                 f"- **SNR Improvement (Delta SNR):** `{eval_res.snr_improvement_db:+.2f} dB`\n"
                                 f"- **Input RMSE:** `{eval_res.input_rmse:.4f}` &nbsp;→&nbsp; **Output RMSE:** `{eval_res.output_rmse:.4f}`\n"
                                 f"- **RMSE Reduction:** `{eval_res.rmse_reduction_percent:.2f}%`\n"
-                                f"- **MAE:** `{eval_res.mae:.4f}`"
+                                f"- **Input MAE:** `{eval_res.input_mae:.4f}` &nbsp;→&nbsp; **Output MAE:** `{eval_res.output_mae:.4f}`"
                             )
                         else:
                             st.info(
