@@ -404,96 +404,74 @@ if workspace.startswith("1"):
         unsafe_allow_html=True,
     )
 
-    col_up1, col_up2 = st.columns([1.2, 1.0])
+    with st.container(border=True):
+        col_up1, col_up2 = st.columns([1.2, 1.0])
 
-    with col_up1:
-        st.subheader("Audio Ingestion")
-        ingest_mode = st.radio(
-            "Select Ingestion Workflow:",
-            [
-                "Workflow A: Clean Audio (Ground-truth available; enable noise synthesis and objective metrics)",
-                "Workflow B: Real-World Degraded Audio (No ground-truth; no-reference evaluation)",
-            ],
-            index=0 if st.session_state.active_ingest_mode == "Workflow A" else 1,
-        )
-
-        selected_mode_key = "Workflow A" if "Workflow A" in ingest_mode else "Workflow B"
-
-        # Detect ingest mode change
-        if selected_mode_key != st.session_state.active_ingest_mode:
-            st.session_state.active_ingest_mode = selected_mode_key
-            reset_reference_uploader()
-            if selected_mode_key == "Workflow A":
-                if st.session_state.source_type in ("synthetic", "clean_upload"):
-                    st.session_state.reference_audio = (
-                        st.session_state.audio_data.copy() if st.session_state.audio_data is not None else None
-                    )
-                else:
-                    # Degraded audio from Workflow B must NOT be treated as clean ground truth
-                    st.session_state.reference_audio = None
-            else:
-                st.session_state.reference_audio = None
-            st.rerun()
-
-        primary_key = f"primary_audio_uploader_v{st.session_state.primary_uploader_version}"
-        uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"], key=primary_key)
-        if uploaded_file is not None:
-            raw_bytes = uploaded_file.getvalue()
-            f_hash = compute_file_hash(raw_bytes)
-
-            # Reinitialize ONLY when a new file is uploaded
-            if f_hash != st.session_state.primary_file_hash:
-                try:
-                    buf = io.BytesIO(raw_bytes)
-                    data, in_sr = sf.read(buf, dtype="float64")
-                    pre_mod.validate_audio(data, in_sr)
-                    st.session_state.sample_rate = in_sr
-                    st.session_state.primary_file_hash = f_hash
-                    # Invalidate reference uploader lifecycle and state immediately
-                    reset_reference_uploader()
-                    st.session_state.noise_component = None
-
-                    if selected_mode_key == "Workflow A":
-                        st.session_state.audio_data = data
-                        st.session_state.reference_audio = data.copy()
-                        st.session_state.noisy_audio = data.copy()
-                        st.session_state.source_type = "clean_upload"
-                        st.success(f"Loaded new Clean Reference audio ({in_sr:,} Hz, shape: {data.shape})")
-                    else:
-                        st.session_state.audio_data = data
-                        st.session_state.reference_audio = None
-                        st.session_state.noisy_audio = data.copy()
-                        st.session_state.source_type = "noisy_upload"
-                        st.success(f"Loaded new Real-World Degraded audio ({in_sr:,} Hz, shape: {data.shape})")
-                except Exception as e:
-                    st.error(f"Failed to load audio file: {e}")
-        elif uploaded_file is None and st.session_state.primary_file_hash is not None:
-            # Primary upload removed: reset uploader lifecycle and restore default synthetic demo
-            reset_primary_uploader()
-            st.session_state.noise_component = None
-            sr_demo = 44100
-            t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
-            demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
-            demo_signal = pre_mod.normalize_audio(demo_signal, target_peak=0.8)
-            st.session_state.audio_data = demo_signal
-            st.session_state.sample_rate = sr_demo
-            st.session_state.source_type = "synthetic"
-            if selected_mode_key == "Workflow A":
-                st.session_state.reference_audio = demo_signal.copy()
-                st.session_state.noisy_audio = demo_signal.copy()
-            else:
-                st.session_state.reference_audio = None
-                st.session_state.noisy_audio = demo_signal.copy()
-            st.rerun()
-
-        if selected_mode_key == "Workflow A" and st.session_state.source_type == "noisy_upload":
-            st.warning(
-                "⚠️ **Clean Ground Truth Required:** The currently loaded recording was ingested as "
-                "real-world degraded audio (Workflow B). Workflow A requires a verified clean recording. "
-                "Please upload a clean audio recording above or reset to the synthetic clean demo tone."
+        with col_up1:
+            st.subheader("Audio Ingestion")
+            ingest_mode = st.radio(
+                "Select Ingestion Workflow:",
+                [
+                    "Workflow A: Clean Audio (Ground-truth available; enable noise synthesis and objective metrics)",
+                    "Workflow B: Real-World Degraded Audio (No ground-truth; no-reference evaluation)",
+                ],
+                index=0 if st.session_state.active_ingest_mode == "Workflow A" else 1,
             )
-            if st.button("Reset to Synthetic Clean Demo Tone", key="btn_reset_demo_workflow_a"):
+
+            selected_mode_key = "Workflow A" if "Workflow A" in ingest_mode else "Workflow B"
+
+            # Detect ingest mode change
+            if selected_mode_key != st.session_state.active_ingest_mode:
+                st.session_state.active_ingest_mode = selected_mode_key
+                reset_reference_uploader()
+                if selected_mode_key == "Workflow A":
+                    if st.session_state.source_type in ("synthetic", "clean_upload"):
+                        st.session_state.reference_audio = (
+                            st.session_state.audio_data.copy() if st.session_state.audio_data is not None else None
+                        )
+                    else:
+                        # Degraded audio from Workflow B must NOT be treated as clean ground truth
+                        st.session_state.reference_audio = None
+                else:
+                    st.session_state.reference_audio = None
+                st.rerun()
+
+            primary_key = f"primary_audio_uploader_v{st.session_state.primary_uploader_version}"
+            uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"], key=primary_key)
+            if uploaded_file is not None:
+                raw_bytes = uploaded_file.getvalue()
+                f_hash = compute_file_hash(raw_bytes)
+
+                # Reinitialize ONLY when a new file is uploaded
+                if f_hash != st.session_state.primary_file_hash:
+                    try:
+                        buf = io.BytesIO(raw_bytes)
+                        data, in_sr = sf.read(buf, dtype="float64")
+                        pre_mod.validate_audio(data, in_sr)
+                        st.session_state.sample_rate = in_sr
+                        st.session_state.primary_file_hash = f_hash
+                        # Invalidate reference uploader lifecycle and state immediately
+                        reset_reference_uploader()
+                        st.session_state.noise_component = None
+
+                        if selected_mode_key == "Workflow A":
+                            st.session_state.audio_data = data
+                            st.session_state.reference_audio = data.copy()
+                            st.session_state.noisy_audio = data.copy()
+                            st.session_state.source_type = "clean_upload"
+                            st.success(f"Loaded new Clean Reference audio ({in_sr:,} Hz, shape: {data.shape})")
+                        else:
+                            st.session_state.audio_data = data
+                            st.session_state.reference_audio = None
+                            st.session_state.noisy_audio = data.copy()
+                            st.session_state.source_type = "noisy_upload"
+                            st.success(f"Loaded new Real-World Degraded audio ({in_sr:,} Hz, shape: {data.shape})")
+                    except Exception as e:
+                        st.error(f"Failed to load audio file: {e}")
+            elif uploaded_file is None and st.session_state.primary_file_hash is not None:
+                # Primary upload removed: reset uploader lifecycle and restore default synthetic demo
                 reset_primary_uploader()
+                st.session_state.noise_component = None
                 sr_demo = 44100
                 t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
                 demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
@@ -501,124 +479,148 @@ if workspace.startswith("1"):
                 st.session_state.audio_data = demo_signal
                 st.session_state.sample_rate = sr_demo
                 st.session_state.source_type = "synthetic"
-                st.session_state.reference_audio = demo_signal.copy()
-                st.session_state.noisy_audio = demo_signal.copy()
-                st.session_state.noise_component = None
-                st.success("Reset to synthetic clean demo signal.")
+                if selected_mode_key == "Workflow A":
+                    st.session_state.reference_audio = demo_signal.copy()
+                    st.session_state.noisy_audio = demo_signal.copy()
+                else:
+                    st.session_state.reference_audio = None
+                    st.session_state.noisy_audio = demo_signal.copy()
                 st.rerun()
 
-        # Optional separate clean reference for Workflow B
-        if selected_mode_key == "Workflow B":
-            st.markdown("#### Optional Ground-Truth Reference Upload")
-            st.caption(
-                "If you have an independent, synchronized clean reference for this degraded recording, "
-                "upload it below. Note: Matching sample rate and shape does not guarantee synchronization; "
-                "the user must ensure the reference is aligned."
-            )
-            ref_uploader_key = f"ref_uploader_v{st.session_state.ref_uploader_version}"
-            ref_file = st.file_uploader(
-                "Upload Reference Audio (.wav)",
-                type=["wav"],
-                key=ref_uploader_key,
-            )
-            if ref_file is None:
-                if st.session_state.ref_file_hash is not None or st.session_state.reference_audio is not None:
-                    reset_reference_uploader()
-                    st.info("External reference removed. Switched to no-reference evaluation.")                    st.rerun()
-            else:
-                current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
-                r_bytes = ref_file.getvalue()
-                r_hash = compute_file_hash(r_bytes)
-                if r_hash != st.session_state.ref_file_hash or st.session_state.ref_primary_hash != current_primary_hash:
-                    try:
-                        r_buf = io.BytesIO(r_bytes)
-                        ref_data, ref_sr = sf.read(r_buf, dtype="float64")
-                        target_noisy = (
-                            st.session_state.noisy_audio
-                            if st.session_state.noisy_audio is not None
-                            else st.session_state.audio_data
-                        )
-                        valid, msg = validate_reference_match(
-                            ref_data, ref_sr, target_noisy, st.session_state.sample_rate
-                        )
-                        if valid:
-                            st.session_state.reference_audio = ref_data
-                            st.session_state.ref_file_hash = r_hash
-                            st.session_state.ref_primary_hash = current_primary_hash
-                            st.success("Clean reference attached! Workflow A objective metrics enabled.")
-                        else:
-                            reset_reference_uploader()
-                            st.error(f"Reference rejected: {msg}")
-                            st.rerun()
-                    except Exception as e:
-                        reset_reference_uploader()
-                        st.error(f"Failed to load reference: {e}")
-                        st.rerun()
-
-    with col_up2:
-        st.subheader("Preprocessing and Controls")
-        cur_sig = (
-            st.session_state.noisy_audio
-            if st.session_state.noisy_audio is not None
-            else st.session_state.audio_data
-        )
-
-        if cur_sig is not None:
-            info = aio.get_audio_info(cur_sig, st.session_state.sample_rate)
-            st.markdown(
-                f"- **Sample Rate:** `{info['sample_rate']:,} Hz`\n"
-                f"- **Channels:** `{info['num_channels']}` ({'Mono' if info['num_channels'] == 1 else 'Stereo'})\n"
-                f"- **Samples:** `{info['num_samples']:,}` ({info['duration_seconds']:.3f} s)\n"
-                f"- **Peak Amplitude:** `{info['peak_amplitude']:.4f}`\n"
-                f"- **RMS Level:** `{info['rms_amplitude']:.4f}`\n"
-                f"- **Crest Factor:** `{info['crest_factor_db']:.2f} dB`"
-            )
-
-            c1, c2 = st.columns(2)
-            with c1:
-                if cur_sig.ndim > 1 and cur_sig.shape[1] > 1:
-                    if st.button("Convert to Mono", use_container_width=True):
-                        st.session_state.noisy_audio = pre_mod.convert_to_mono(st.session_state.noisy_audio)
-                        if st.session_state.reference_audio is not None:
-                            st.session_state.reference_audio = pre_mod.convert_to_mono(
-                                st.session_state.reference_audio
-                            )
-                        st.session_state.audio_data = pre_mod.convert_to_mono(st.session_state.audio_data)
-                        st.success("Downmixed to mono.")
-                        st.rerun()
-                else:
-                    st.button("Mono Signal (Downmix Inactive)", disabled=True, use_container_width=True)
-
-            with c2:
-                if st.button("Normalize Signal (Linked Gain)", use_container_width=True):
-                    norm_n, norm_r, norm_d, g = apply_linked_normalization(
-                        st.session_state.noisy_audio,
-                        st.session_state.reference_audio,
-                        st.session_state.audio_data,
-                        target_peak=1.0,
-                    )
-                    st.session_state.noisy_audio = norm_n
-                    st.session_state.reference_audio = norm_r
-                    st.session_state.audio_data = norm_d
-                    st.success(f"Signal normalized (gain: {g:.3f}x). Relative reference gain preserved.")
+            if selected_mode_key == "Workflow A" and st.session_state.source_type == "noisy_upload":
+                st.warning(
+                    "⚠️ **Clean Ground Truth Required:** The currently loaded recording was ingested as "
+                    "real-world degraded audio (Workflow B). Workflow A requires a verified clean recording. "
+                    "Please upload a clean audio recording above or reset to the synthetic clean demo tone."
+                )
+                if st.button("Reset to Synthetic Clean Demo Tone", key="btn_reset_demo_workflow_a"):
+                    reset_primary_uploader()
+                    sr_demo = 44100
+                    t_demo = np.linspace(0.0, 1.5, int(sr_demo * 1.5), endpoint=False)
+                    demo_signal = 0.5 * np.sin(2 * np.pi * 440 * t_demo) + 0.25 * np.sin(2 * np.pi * 880 * t_demo)
+                    demo_signal = pre_mod.normalize_audio(demo_signal, target_peak=0.8)
+                    st.session_state.audio_data = demo_signal
+                    st.session_state.sample_rate = sr_demo
+                    st.session_state.source_type = "synthetic"
+                    st.session_state.reference_audio = demo_signal.copy()
+                    st.session_state.noisy_audio = demo_signal.copy()
+                    st.session_state.noise_component = None
+                    st.success("Reset to synthetic clean demo signal.")
                     st.rerun()
 
-            st.markdown("#### Audio Player")
-            render_audio_player(cur_sig, st.session_state.sample_rate, "Active Signal Playback")
-            render_download_button(
-                cur_sig, st.session_state.sample_rate, "audio_workspace_active.wav", "Download Active Audio"
+            # Optional separate clean reference for Workflow B
+            if selected_mode_key == "Workflow B":
+                st.markdown("#### Optional Ground-Truth Reference Upload")
+                st.caption(
+                    "If you have an independent, synchronized clean reference for this degraded recording, "
+                    "upload it below. Note: Matching sample rate and shape does not guarantee synchronization; "
+                    "the user must ensure the reference is aligned."
+                )
+                ref_uploader_key = f"ref_uploader_v{st.session_state.ref_uploader_version}"
+                ref_file = st.file_uploader(
+                    "Upload Reference Audio (.wav)",
+                    type=["wav"],
+                    key=ref_uploader_key,
+                )
+                if ref_file is None:
+                    if st.session_state.ref_file_hash is not None or st.session_state.reference_audio is not None:
+                        reset_reference_uploader()
+                        st.info("External reference removed. Switched to no-reference evaluation.")                    st.rerun()
+                else:
+                    current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
+                    r_bytes = ref_file.getvalue()
+                    r_hash = compute_file_hash(r_bytes)
+                    if r_hash != st.session_state.ref_file_hash or st.session_state.ref_primary_hash != current_primary_hash:
+                        try:
+                            r_buf = io.BytesIO(r_bytes)
+                            ref_data, ref_sr = sf.read(r_buf, dtype="float64")
+                            target_noisy = (
+                                st.session_state.noisy_audio
+                                if st.session_state.noisy_audio is not None
+                                else st.session_state.audio_data
+                            )
+                            valid, msg = validate_reference_match(
+                                ref_data, ref_sr, target_noisy, st.session_state.sample_rate
+                            )
+                            if valid:
+                                st.session_state.reference_audio = ref_data
+                                st.session_state.ref_file_hash = r_hash
+                                st.session_state.ref_primary_hash = current_primary_hash
+                                st.success("Clean reference attached! Workflow A objective metrics enabled.")
+                            else:
+                                reset_reference_uploader()
+                                st.error(f"Reference rejected: {msg}")
+                                st.rerun()
+                        except Exception as e:
+                            reset_reference_uploader()
+                            st.error(f"Failed to load reference: {e}")
+                            st.rerun()
+
+        with col_up2:
+            st.subheader("Preprocessing and Controls")
+            cur_sig = (
+                st.session_state.noisy_audio
+                if st.session_state.noisy_audio is not None
+                else st.session_state.audio_data
             )
 
-    st.markdown("---")
-    st.subheader("Time-Domain Waveform")
-    if cur_sig is not None:
-        fig_wave = vis_mod.plot_waveform(
-            cur_sig, st.session_state.sample_rate, title="Active Signal Time-Domain Waveform"
-        )
-        st.pyplot(fig_wave)
-        plt.close(fig_wave)
+            if cur_sig is not None:
+                info = aio.get_audio_info(cur_sig, st.session_state.sample_rate)
+                st.markdown(
+                    f"- **Sample Rate:** `{info['sample_rate']:,} Hz`\n"
+                    f"- **Channels:** `{info['num_channels']}` ({'Mono' if info['num_channels'] == 1 else 'Stereo'})\n"
+                    f"- **Samples:** `{info['num_samples']:,}` ({info['duration_seconds']:.3f} s)\n"
+                    f"- **Peak Amplitude:** `{info['peak_amplitude']:.4f}`\n"
+                    f"- **RMS Level:** `{info['rms_amplitude']:.4f}`\n"
+                    f"- **Crest Factor:** `{info['crest_factor_db']:.2f} dB`"
+                )
 
-# =============================================================================
+                c1, c2 = st.columns(2)
+                with c1:
+                    if cur_sig.ndim > 1 and cur_sig.shape[1] > 1:
+                        if st.button("Convert to Mono", use_container_width=True):
+                            st.session_state.noisy_audio = pre_mod.convert_to_mono(st.session_state.noisy_audio)
+                            if st.session_state.reference_audio is not None:
+                                st.session_state.reference_audio = pre_mod.convert_to_mono(
+                                    st.session_state.reference_audio
+                                )
+                            st.session_state.audio_data = pre_mod.convert_to_mono(st.session_state.audio_data)
+                            st.success("Downmixed to mono.")
+                            st.rerun()
+                    else:
+                        st.button("Mono Signal (Downmix Inactive)", disabled=True, use_container_width=True)
+
+                with c2:
+                    if st.button("Normalize Signal (Linked Gain)", use_container_width=True):
+                        norm_n, norm_r, norm_d, g = apply_linked_normalization(
+                            st.session_state.noisy_audio,
+                            st.session_state.reference_audio,
+                            st.session_state.audio_data,
+                            target_peak=1.0,
+                        )
+                        st.session_state.noisy_audio = norm_n
+                        st.session_state.reference_audio = norm_r
+                        st.session_state.audio_data = norm_d
+                        st.success(f"Signal normalized (gain: {g:.3f}x). Relative reference gain preserved.")
+                        st.rerun()
+
+                st.markdown("#### Audio Player")
+                render_audio_player(cur_sig, st.session_state.sample_rate, "Active Signal Playback")
+                render_download_button(
+                    cur_sig, st.session_state.sample_rate, "audio_workspace_active.wav", "Download Active Audio"
+                )
+
+        st.markdown("---")
+        with st.container(border=True):
+        st.subheader("Time-Domain Waveform")
+            if cur_sig is not None:
+                fig_wave = vis_mod.plot_waveform(
+                    cur_sig, st.session_state.sample_rate, title="Active Signal Time-Domain Waveform"
+                )
+                st.pyplot(fig_wave)
+                plt.close(fig_wave)
+
+        # =============================================================================
 # WORKSPACE 2: Controlled Noise Generation
 # =============================================================================
 elif workspace.startswith("2"):
@@ -1300,63 +1302,65 @@ elif workspace.startswith("6"):
     else:
         sig_len = len(cur_sig) if cur_sig.ndim == 1 else len(cur_sig[:, 0])
 
-        st.subheader("Fast Fourier Transform (FFT) Magnitude Spectrum")
-        c_fft1, c_fft2 = st.columns([1, 2])
+        with st.container(border=True):
+            st.subheader("Fast Fourier Transform (FFT) Magnitude Spectrum")
+            c_fft1, c_fft2 = st.columns([1, 2])
 
-        with c_fft1:
-            fft_win = st.selectbox("FFT Window Function:", ["hann", "hamming", "blackman", "boxcar"], index=0)
-            db_scale = st.checkbox("Display in Decibels (dBFS)", value=True)
-            max_plot_f = st.slider("Max Display Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
+            with c_fft1:
+                fft_win = st.selectbox("FFT Window Function:", ["hann", "hamming", "blackman", "boxcar"], index=0)
+                db_scale = st.checkbox("Display in Decibels (dBFS)", value=True)
+                max_plot_f = st.slider("Max Display Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
 
-        with c_fft2:
-            freqs, mag_fft, _ = fft_mod.compute_fft(cur_sig, sr, window=fft_win)
-            fig_fft = vis_mod.plot_fft_spectrum(
-                frequencies=freqs, magnitude=mag_fft, db_scale=db_scale, max_freq=float(max_plot_f)
-            )
-            st.pyplot(fig_fft)
-            plt.close(fig_fft)
+            with c_fft2:
+                freqs, mag_fft, _ = fft_mod.compute_fft(cur_sig, sr, window=fft_win)
+                fig_fft = vis_mod.plot_fft_spectrum(
+                    frequencies=freqs, magnitude=mag_fft, db_scale=db_scale, max_freq=float(max_plot_f)
+                )
+                st.pyplot(fig_fft)
+                plt.close(fig_fft)
 
-            top_indices = np.argsort(mag_fft)[::-1][:5]
-            peaks_info = [f"{freqs[idx]:.1f} Hz ({20*np.log10(max(mag_fft[idx], 1e-12)):.1f} dBFS)" for idx in top_indices if freqs[idx] > 10]
-            st.caption(f"**Dominant Spectral Peaks:** {', '.join(peaks_info)}")
+                top_indices = np.argsort(mag_fft)[::-1][:5]
+                peaks_info = [f"{freqs[idx]:.1f} Hz ({20*np.log10(max(mag_fft[idx], 1e-12)):.1f} dBFS)" for idx in top_indices if freqs[idx] > 10]
+                st.caption(f"**Dominant Spectral Peaks:** {', '.join(peaks_info)}")
 
-        st.markdown("---")
-        st.subheader("Short-Time Fourier Transform (STFT) Spectrogram")
-        st.caption("Accurate calibrated units: dBFS/Hz for power spectral density, dBFS for spectrum.")
+            st.markdown("---")
+        with st.container(border=True):
+            st.subheader("Short-Time Fourier Transform (STFT) Spectrogram")
+            st.caption("Accurate calibrated units: dBFS/Hz for power spectral density, dBFS for spectrum.")
 
-        # Adapt nperseg options based on recording length
-        standard_segments = [256, 512, 1024, 2048, 4096]
-        valid_segments = [s for s in standard_segments if s <= sig_len]
+            # Adapt nperseg options based on recording length
+            standard_segments = [256, 512, 1024, 2048, 4096]
+            valid_segments = [s for s in standard_segments if s <= sig_len]
 
-        if not valid_segments:            st.warning(
-                f"Signal length ({sig_len} samples) is too short for standard STFT analysis (minimum segment length is 256 samples). "
-                "Spectrogram computation requires longer recordings."
-            )
-        else:
-            default_val = 1024 if 1024 in valid_segments else valid_segments[-1]
+            if not valid_segments:            st.warning(
+                    f"Signal length ({sig_len} samples) is too short for standard STFT analysis (minimum segment length is 256 samples). "
+                    "Spectrogram computation requires longer recordings."
+                )
+            else:
+                default_val = 1024 if 1024 in valid_segments else valid_segments[-1]
 
-            c_stft1, c_stft2 = st.columns([1, 2])
+                c_stft1, c_stft2 = st.columns([1, 2])
 
-            with c_stft1:
-                nperseg_val = st.select_slider("Segment Length (nperseg):", options=valid_segments, value=default_val)
-                scaling_mode = st.radio("Spectrogram Scaling:", ["density (dBFS/Hz)", "spectrum (dBFS)"], index=0)
-                sc_val = "density" if "density" in scaling_mode else "spectrum"
-                stft_max_f = st.slider("Spectrogram Max Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
+                with c_stft1:
+                    nperseg_val = st.select_slider("Segment Length (nperseg):", options=valid_segments, value=default_val)
+                    scaling_mode = st.radio("Spectrogram Scaling:", ["density (dBFS/Hz)", "spectrum (dBFS)"], index=0)
+                    sc_val = "density" if "density" in scaling_mode else "spectrum"
+                    stft_max_f = st.slider("Spectrogram Max Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
 
-            with c_stft2:
-                try:
-                    t_spec, f_spec, sxx_db = fft_mod.compute_spectrogram(
-                        cur_sig, sr, nperseg=nperseg_val, scaling=sc_val
-                    )
-                    unit_label = "dBFS/Hz" if sc_val == "density" else "dBFS"
-                    fig_spec = vis_mod.plot_spectrogram(
-                        times=t_spec,
-                        frequencies=f_spec,
-                        Sxx_db=sxx_db,
-                        title=f"Audio Spectrogram (STFT, Scaling: {unit_label})",
-                        max_freq=float(stft_max_f),
-                    )
-                    st.pyplot(fig_spec)
-                    plt.close(fig_spec)
-                except Exception as e:
-                    st.error(f"Spectrogram computation error: {e}")
+                with c_stft2:
+                    try:
+                        t_spec, f_spec, sxx_db = fft_mod.compute_spectrogram(
+                            cur_sig, sr, nperseg=nperseg_val, scaling=sc_val
+                        )
+                        unit_label = "dBFS/Hz" if sc_val == "density" else "dBFS"
+                        fig_spec = vis_mod.plot_spectrogram(
+                            times=t_spec,
+                            frequencies=f_spec,
+                            Sxx_db=sxx_db,
+                            title=f"Audio Spectrogram (STFT, Scaling: {unit_label})",
+                            max_freq=float(stft_max_f),
+                        )
+                        st.pyplot(fig_spec)
+                        plt.close(fig_spec)
+                    except Exception as e:
+                        st.error(f"Spectrogram computation error: {e}")
