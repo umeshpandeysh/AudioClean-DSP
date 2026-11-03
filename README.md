@@ -4,7 +4,8 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-1.66.1-red.svg)](https://audioclean-dsp-e8gienueiutdbjnw2apth7.streamlit.app/)
-[![Pytest Suite](https://img.shields.io/badge/pytest-150%20tests-brightgreen.svg)](https://pytest.org/)\n[![CI](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml)
+[![Pytest Suite](https://img.shields.io/badge/pytest-150%20tests-brightgreen.svg)](https://pytest.org/)
+[![CI](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **AudioClean DSP** is a comprehensive Python-based Digital Signal Processing (DSP) engineering application and laboratory workbench designed for digital audio noise removal and rigorous, scientifically grounded comparative performance analysis between **Finite Impulse Response (FIR)** and **Infinite Impulse Response (IIR)** digital filters.
