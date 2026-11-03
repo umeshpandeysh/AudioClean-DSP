@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-1.66.1-red.svg)](https://audioclean-dsp-e8gienueiutdbjnw2apth7.streamlit.app/)
-[![Pytest Suite](https://img.shields.io/badge/pytest-150%20passed-brightgreen.svg)](https://pytest.org/)
+[![Pytest Suite](https://img.shields.io/badge/pytest-150%20tests-brightgreen.svg)](https://pytest.org/)\n[![CI](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **AudioClean DSP** is a comprehensive Python-based Digital Signal Processing (DSP) engineering application and laboratory workbench designed for digital audio noise removal and rigorous, scientifically grounded comparative performance analysis between **Finite Impulse Response (FIR)** and **Infinite Impulse Response (IIR)** digital filters.
@@ -87,6 +87,22 @@ The Streamlit engineering dashboard organizes the end-to-end signal processing p
 | **6** | **Signal Analysis & Diagnostics** | Inspect single-sided calibrated FFT spectra with dominant frequency peak readouts. Generate STFT spectrograms with calibrated physical units ($\text{dBFS/Hz}$ PSD or $\text{dBFS}$ spectrum) and dynamic segment scaling. |
 
 ---
+
+## UI/UX Release Notes (November 2026)
+
+The Streamlit interface has received a presentation-layer redesign while preserving the DSP processing modules and scientific calculations.
+
+- Added a light-blue/white engineering dashboard theme and native Streamlit theme configuration.
+- Refined the application header, workspace titles, session indicators, status cards, and sidebar navigation.
+- Organized all six workspaces into bordered control, inspection, execution, and result panels.
+- Standardized waveform, FFT, spectrogram, filter magnitude, phase, and FIR/IIR comparison plot styling.
+- Added a compact four-stage workflow navigator and a capability ribbon.
+- Added restrained motion effects: animated header accent, page entrance, session pulse, brand shimmer, hover feedback, and button interaction feedback.
+- Added reduced-motion handling and responsive layout rules for narrow/mobile screens.
+- Corrected the external-reference removal flow's malformed statement and repaired indentation in the time-domain and STFT display sections.
+- Corrected FIR/IIR metric presentation to use the actual `AudioEvaluationResult.input_mae` and `output_mae` fields instead of the nonexistent `mae` attribute.
+
+These UI changes are presentation and application-flow corrections; they do not alter FIR/IIR filter design, filtering algorithms, FFT/STFT mathematics, or quality-metric formulas. The GitHub Actions workflow verifies compilation and automated tests, but does not replace manual browser/device acceptance testing.
 
 ## 4. Technical Architecture
 
@@ -210,7 +226,24 @@ The computational performance of FIR and IIR digital filters was evaluated under
 
 AudioClean DSP was developed following rigorous test-driven engineering practices.
 
-> **Previously Reported Automated Test Suite:** **150 passed** (100% pass rate across 11 test modules, exit code 0).
+> **Automated test suite:** **150 tests passed** on each of Python 3.10, 3.12, and 3.13 in GitHub Actions (450 successful test executions across the three-version matrix; 0 failures). The same CI run also completed Python bytecode compilation for `app.py`, `src`, `tests`, and `scripts`.
+
+### Continuous Integration (GitHub Actions)
+
+The repository now runs an automated validation workflow on every push to `main`, pull request targeting `main`, and manual workflow dispatch.
+
+| Matrix environment | Python compilation | Pytest result |
+| :--- | :---: | :---: |
+| Ubuntu / Python 3.10 | **PASS** | **150 passed** |
+| Ubuntu / Python 3.12 | **PASS** | **150 passed** |
+| Ubuntu / Python 3.13 | **PASS** | **150 passed** |
+
+- **Workflow:** [AudioClean DSP CI](https://github.com/umeshpandeysh/AudioClean-DSP/actions/workflows/ci.yml)
+- **Successful run:** [Run 41579919481](https://github.com/umeshpandeysh/AudioClean-DSP/actions/runs/41579919481)
+- **Validated commit:** `2c07e4e2221bbac59305510f0de2a30a600ddb66`
+- **Overall result:** 3/3 matrix jobs successful; 450 test executions passed (the same 150-test suite executed once per Python version).
+
+The matrix currently tests Python 3.10, 3.12, and 3.13. Python 3.11 remains listed as an installation-compatible version but is not part of this CI matrix.
 
 ### Test Suite Breakdown:
 
