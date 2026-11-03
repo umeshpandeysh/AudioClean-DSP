@@ -33,26 +33,237 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .main-title {
-        font-size: 2.2rem;
+    :root {
+        --ac-ink: #14243b;
+        --ac-muted: #66758b;
+        --ac-blue: #2563eb;
+        --ac-cyan: #38bdf8;
+        --ac-line: #e3eaf3;
+        --ac-surface: #ffffff;
+    }
+    html, body, [class*="css"] {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .stApp {
+        background: #f3f6fb;
+        color: var(--ac-ink);
+    }
+    [data-testid="stHeader"] {
+        background: rgba(243, 246, 251, 0.88);
+    }
+    .block-container {
+        max-width: 1500px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+    h1, h2, h3, h4, p, label, [data-testid="stMarkdownContainer"] {
+        color: var(--ac-ink);
+    }
+    h2, h3 {
+        letter-spacing: -0.025em;
         font-weight: 700;
-        color: #1f77b4;
-        margin-bottom: 0.2rem;
+    }
+    .main-title {
+        font-size: clamp(1.65rem, 2.4vw, 2.15rem);
+        line-height: 1.18;
+        font-weight: 800;
+        letter-spacing: -0.045em;
+        color: #14243b;
+        margin: 1.7rem 0 0.35rem;
     }
     .sub-title {
-        font-size: 1.05rem;
-        color: #495057;
-        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        line-height: 1.65;
+        color: var(--ac-muted);
+        margin: 0 0 1.5rem;
+        max-width: 850px;
+    }
+    .ac-hero {
+        position: relative;
+        overflow: hidden;
+        padding: 1.65rem 1.85rem;
+        margin: 0 0 1.2rem;
+        border: 1px solid rgba(148, 190, 255, 0.22);
+        border-radius: 22px;
+        color: #f8fbff;
+        background: linear-gradient(118deg, #101f38 0%, #173b68 58%, #155e85 100%);
+        box-shadow: 0 16px 38px rgba(24, 55, 94, 0.13);
+    }
+    .ac-hero:after {
+        content: "";
+        position: absolute;
+        width: 280px;
+        height: 280px;
+        right: -85px;
+        top: -155px;
+        border: 1px solid rgba(186, 230, 253, 0.23);
+        border-radius: 50%;
+        box-shadow: 0 0 0 28px rgba(186, 230, 253, 0.045), 0 0 0 58px rgba(186, 230, 253, 0.035);
+        pointer-events: none;
+    }
+    .ac-hero-kicker {
+        color: #9bdcfb;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        margin-bottom: 0.65rem;
+    }
+    .ac-hero-title {
+        color: #ffffff;
+        font-size: clamp(1.8rem, 3.1vw, 2.55rem);
+        font-weight: 850;
+        line-height: 1.08;
+        letter-spacing: -0.055em;
+        margin: 0 0 0.55rem;
+    }
+    .ac-hero-copy {
+        color: #d5e5f6;
+        font-size: 0.96rem;
+        line-height: 1.6;
+        max-width: 760px;
+        margin: 0;
+    }
+    .ac-hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-top: 1.1rem;
+    }
+    .ac-pill {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(219, 234, 254, 0.22);
+        background: rgba(255, 255, 255, 0.09);
+        color: #e8f5ff;
+        padding: 0.32rem 0.68rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 650;
     }
     .metric-badge {
-        background-color: #f8f9fa;
-        border-left: 4px solid #1f77b4;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        border-radius: 4px;
+        background: #ffffff;
+        border: 1px solid var(--ac-line);
+        border-left: 4px solid var(--ac-blue);
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.65rem;
+        border-radius: 13px;
+        box-shadow: 0 4px 14px rgba(28, 51, 84, 0.035);
+    }
+    [data-testid="stMetric"] {
+        background: #ffffff;
+        border: 1px solid var(--ac-line);
+        padding: 0.85rem 1rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 14px rgba(28, 51, 84, 0.035);
+    }
+    [data-testid="stMetricLabel"] {
+        color: #687991;
+        font-size: 0.78rem;
+        font-weight: 650;
+    }
+    [data-testid="stMetricValue"] {
+        color: #14243b;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+    }
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #101f38 0%, #142d4b 100%);
+        border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    section[data-testid="stSidebar"] * {
+        color: #eaf2fb;
+    }
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: #c2d3e6;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: rgba(219, 234, 254, 0.16);
+    }
+    section[data-testid="stSidebar"] [data-testid="stAlert"] {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.13);
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] {
+        gap: 0.38rem;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label {
+        background: rgba(255,255,255,0.055);
+        border: 1px solid rgba(219,234,254,0.11);
+        border-radius: 11px;
+        padding: 0.62rem 0.72rem;
+        transition: background 120ms ease, border-color 120ms ease;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(125,211,252,0.4);
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label p {
+        font-size: 0.88rem;
+        font-weight: 650;
+    }
+    .stButton > button, .stDownloadButton > button {
+        min-height: 2.65rem;
+        border-radius: 11px;
+        border: 1px solid #d5e0ef;
+        font-weight: 700;
+        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+    .stButton > button[kind="primary"], .stDownloadButton > button[kind="primary"] {
+        background: linear-gradient(105deg, #1d4ed8, #0e7490);
+        border: 0;
+        color: white;
+        box-shadow: 0 7px 16px rgba(37,99,235,0.17);
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        border-color: #8ab7f7;
+        transform: translateY(-1px);
+        box-shadow: 0 7px 18px rgba(27, 62, 110, 0.10);
+    }
+    [data-testid="stFileUploader"] section {
+        background: #f8fbff;
+        border: 1.5px dashed #b9cce3;
+        border-radius: 15px;
+    }
+    [data-testid="stFileUploader"] section:hover {
+        border-color: #4f8fe8;
+        background: #f2f8ff;
+    }
+    [data-testid="stAudio"] {
+        border: 1px solid var(--ac-line);
+        border-radius: 13px;
+        padding: 0.3rem;
+        background: #ffffff;
+    }
+    [data-testid="stExpander"], [data-testid="stVerticalBlockBorderWrapper"] {
+        border-color: var(--ac-line);
+        border-radius: 14px;
     }
     .stAlert {
-        border-radius: 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        border: 1px solid var(--ac-line);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-weight: 700;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #1d4ed8;
+    }
+    div[data-testid="stMarkdownContainer"] hr {
+        border-color: #e2eaf4;
+        margin: 1.35rem 0;
+    }
+    @media (max-width: 768px) {
+        .block-container { padding: 1rem 1rem 2rem; }
+        .ac-hero { padding: 1.3rem 1.15rem; border-radius: 17px; }
+        .main-title { margin-top: 1.2rem; }
     }
     </style>
     """,
@@ -222,18 +433,27 @@ if st.session_state.audio_data is None:
 # -----------------------------------------------------------------------------
 # Sidebar Navigation and System Status
 # -----------------------------------------------------------------------------
-st.sidebar.title("AudioClean DSP")
-st.sidebar.markdown("**Undergraduate DSP Engineering Project**")
+st.sidebar.markdown(
+    """
+    <div style="padding:0.45rem 0 0.8rem;">
+      <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.16em;color:#7dd3fc;text-transform:uppercase;">DSP ENGINEERING LAB</div>
+      <div style="font-size:1.55rem;font-weight:850;letter-spacing:-0.05em;color:#ffffff;margin-top:0.22rem;">◉ AudioClean</div>
+      <div style="font-size:0.88rem;font-weight:650;color:#d4e5f7;">Signal Processing Studio</div>
+      <div style="font-size:0.72rem;color:#9fb6cf;margin-top:0.55rem;">Explore · Design · Compare · Analyze</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 workspace = st.sidebar.radio(
-    "Select Workspace",
+    "WORKSPACES",
     [
-        "1. Audio Workspace",
-        "2. Noise Generation",
-        "3. FIR Filter Designer",
-        "4. IIR Filter Designer",
-        "5. FIR vs. IIR Comparison",
-        "6. Signal Analysis",
+        "1  ·  Audio Workspace",
+        "2  ·  Noise Generation",
+        "3  ·  FIR Filter Designer",
+        "4  ·  IIR Filter Designer",
+        "5  ·  FIR vs. IIR Comparison",
+        "6  ·  Signal Analysis",
     ],
     index=0,
 )
@@ -265,7 +485,44 @@ else:
     st.sidebar.warning("No audio signal loaded.")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("AudioClean DSP v1.4 | Academic DSP Application")
+st.sidebar.caption("AUDIOCLEAN DSP  ·  VERSION 1.4")
+st.sidebar.caption("Academic digital signal processing project")
+
+workspace_names = {
+    "1": ("Audio ingestion", "Load, inspect and prepare your recording."),
+    "2": ("Noise laboratory", "Create controlled noise for repeatable experiments."),
+    "3": ("FIR filter design", "Explore windowed finite impulse response filters."),
+    "4": ("IIR filter design", "Configure Butterworth and notch filters."),
+    "5": ("Comparative evaluation", "Compare FIR and IIR under matched conditions."),
+    "6": ("Signal diagnostics", "Inspect spectra, dominant peaks and spectrograms."),
+}
+workspace_key = workspace.split()[0]
+workspace_name, workspace_copy = workspace_names.get(workspace_key, ("DSP workspace", "Explore the signal processing workflow."))
+
+st.markdown(
+    f"""
+    <div class="ac-hero">
+      <div class="ac-hero-kicker">Digital audio processing · Interactive engineering workbench</div>
+      <div class="ac-hero-title">AudioClean <span style="color:#7dd3fc;">DSP</span></div>
+      <p class="ac-hero-copy">A practical environment for audio denoising, digital filter design and evidence-based FIR vs. IIR analysis.</p>
+      <div class="ac-hero-meta">
+        <span class="ac-pill">Python · SciPy</span>
+        <span class="ac-pill">FIR + IIR</span>
+        <span class="ac-pill">FFT · STFT</span>
+        <span class="ac-pill">SNR · RMSE · MAE</span>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+if active_sig is not None:
+    status_cols = st.columns(4)
+    status_cols[0].metric("ACTIVE WORKSPACE", workspace_name)
+    status_cols[1].metric("SAMPLE RATE", f"{sr:,} Hz")
+    status_cols[2].metric("RECORDING LENGTH", f"{dur:.2f} s")
+    status_cols[3].metric("REFERENCE", "Available" if has_ref else "Not attached")
+    st.caption(workspace_copy)
 
 # =============================================================================
 # WORKSPACE 1: Audio Workspace
@@ -397,8 +654,7 @@ if workspace.startswith("1"):
             if ref_file is None:
                 if st.session_state.ref_file_hash is not None or st.session_state.reference_audio is not None:
                     reset_reference_uploader()
-                    st.info("External reference removed. Switched to no-reference evaluation.")
-                    st.rerun()
+                    st.info("External reference removed. Switched to no-reference evaluation.")                    st.rerun()
             else:
                 current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
                 r_bytes = ref_file.getvalue()
@@ -798,7 +1054,6 @@ elif workspace.startswith("3"):
                             "(SNR / RMSE / MAE) are not computed because no clean reference was provided. "
                             "Inspect frequency spectrum and spectrogram below."
                         )
-
                 if ref is not None and mode_str == "zero_phase":
                     fig_comp = vis_mod.plot_signal_comparison(
                         ref, sig, filtered_fir, sr, title="Time-Domain Comparison: Clean vs. Noisy vs. FIR Filtered"
@@ -1197,8 +1452,7 @@ elif workspace.startswith("6"):
         standard_segments = [256, 512, 1024, 2048, 4096]
         valid_segments = [s for s in standard_segments if s <= sig_len]
 
-        if not valid_segments:
-            st.warning(
+        if not valid_segments:            st.warning(
                 f"Signal length ({sig_len} samples) is too short for standard STFT analysis (minimum segment length is 256 samples). "
                 "Spectrogram computation requires longer recordings."
             )
