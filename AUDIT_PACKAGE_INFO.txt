@@ -1,0 +1,63 @@
+================================================================================
+AUDIOCLEAN DSP — COMPLETE INDEPENDENT AUDIT PACKAGE INFORMATION
+================================================================================
+
+1. PROJECT IDENTIFICATION
+-------------------------
+Project Name       : AudioClean DSP
+Full Project Title : Digital Audio Noise Removal and Comparative Performance Analysis
+                     Using FIR and IIR Digital Filters
+Original Directory : C:\Users\UMESH PANDEY\Downloads\ceenew\AudioClean-DSP
+Python Version     : 3.13.15 (Virtualenv: Python 3.13.15)
+Package Created At : 2026-11-03 01:04:54 IST (UTC+05:30)
+
+2. REPOSITORY & VERSION CONTROL STATUS
+--------------------------------------
+Parent Repository  : C:\Users\UMESH PANDEY\Downloads\ceenew
+Git Branch         : main
+Commit Hash        : 185414db31216e3f4da0a8fd518f94ee585caf37
+Scope / Worktree   : AudioClean-DSP sub-project directory
+Working Tree Status:
+  - Parent git status : Untracked directory 'AudioClean-DSP/' in parent repository.
+  - Sub-project status: All internal project files preserved; no commits or git history
+                        were modified, complying strictly with audit guidelines.
+  - Integrity control : Every file is sealed and tracked via SHA-256 cryptographic hashes.
+
+3. INCLUDED FILES & CRYPTOGRAPHIC CHECKSUMS (SHA-256)
+------------------------------------------------------
+Total Packaged Project Files : 22
+  SHA256: decc39c2e7a65c4b58f574e5ce4b4d2fed42d772dc95ddac8d05c5e0372d6932  ( 8673 bytes)  README.md
+  SHA256: 6c6ccf864e8f2d2e0223ee8e39bfde660c12435aa37d81e2b14000a6bee15003  (   42 bytes)  pytest.ini
+  SHA256: 687a1dc9abf1dcdb3a2bddd387fac68d29d4580670c6f5f90b7c54b9f1cc5d65  (  133 bytes)  requirements.txt
+  SHA256: 9fb9c7f1e17404168692a839e3be5eca23bbe4a199cd3f1ba87b55a72eba5f5c  (18947 bytes)  scripts/verify_audit_remediation.py
+  SHA256: 631c04411e711623545542f868b07d141d0cf60adbb7278932277e3a32477d4b  (   56 bytes)  src/__init__.py
+  SHA256: 6b00774a2b01de436e0ac9d163f1a349d84db5dee571148ef01f638382e7538d  ( 6333 bytes)  src/audio_io.py
+  SHA256: bf95cd8239c0e5475247769dbff9785e6eac210e4cf5d0c3bcc427973edd4661  (10237 bytes)  src/fft_analysis.py
+  SHA256: ce120b8ff73797936479c3399665e3623abb9a0941c2e7ff725315d2cd3fc36d  (14563 bytes)  src/fir_filters.py
+  SHA256: a9ee5b0d18e231d3b06b4f6d9272adb658a36ce114673de4c7e774fef766aac5  (19113 bytes)  src/iir_filters.py
+  SHA256: 702a38f84da407bce993a1f5a2d0a0c2a7ddc54311a303a1d22d706a5ae8f090  ( 9920 bytes)  src/noise_generator.py
+  SHA256: 27af1f01a41d48f08c365493ea61488b57cd8f2e06c944883ec8a857e49f6325  ( 7713 bytes)  src/preprocessing.py
+  SHA256: a697822c0b01d14eb7e51d7a6a698324362f66da916468098eb3d203c74b39b9  (14847 bytes)  src/visualization.py
+  SHA256: 6b9450945d5be59f0a99bb70a2d7db6bb43955b71a98c5ee332ef9c185aa76b1  (   46 bytes)  tests/__init__.py
+  SHA256: 6c0b70072005b0a355dce4806998e5abc04cd4e772735a478d4fa7dc23f7f55b  (   98 bytes)  tests/conftest.py
+  SHA256: 72acc2b8cc5fbc663a46a18783f060f1cb12f8835806603c1c8888acfb9b800a  ( 5485 bytes)  tests/test_audio_io.py
+  SHA256: 18204ee629fae18973016f2e07bb75ff780fbde8120d04844f4a6e500d45dcbc  ( 9402 bytes)  tests/test_fft_analysis.py
+  SHA256: 3ee2c7909f746468fac06b3e7c30c4780acc38891bc6e6c09e1acae61a1c51a8  (13430 bytes)  tests/test_fir_filters.py
+  SHA256: 7346fb38101322139d8677d6cdd126766e37dc526dc03ddb88e44e61760aa9ae  (15375 bytes)  tests/test_iir_filters.py
+  SHA256: d26501f01336ccd7dafd36f68d92e1fa3ee85c1a4d09d00a91e4130d9ad27c4c  ( 7967 bytes)  tests/test_integration.py
+  SHA256: 381b7a98e52c119a4b7ab90e4f1edcd4603a764c9ddedccff2933f2cd5cc15cd  ( 5629 bytes)  tests/test_noise_generator.py
+  SHA256: b3575a27c8109faeb5b80b188b1ac17938ba4bf8cf7740864a7c89ff75835933  ( 4558 bytes)  tests/test_preprocessing.py
+  SHA256: c5662b5baac4ae27133b9d05cbb529b8ec144b78cbcf25cf731ad363d4a7273a  ( 5469 bytes)  tests/test_visualization.py
+
+4. INDEPENDENT REPRODUCIBILITY & INTEGRITY CONFIRMATION
+-------------------------------------------------------
+- All source modules (src/), test suites (tests/), verification scripts (scripts/),
+  configurations (pytest.ini), requirements (requirements.txt), and documentation (README.md)
+  are completely included in this package.
+- This package is 100% self-contained and does NOT depend on external project files
+  outside of the standard virtual environment dependencies listed in requirements.txt.
+- Every file was tested and proven by extracting into an isolated temporary directory
+  and executing all 98 automated tests and the consolidated verification script.
+- Zero project files were modified, refactored, reformatted, or deleted during packaging.
+- Phase 6 (Performance Metrics Module) remains completely unstarted.
+================================================================================
