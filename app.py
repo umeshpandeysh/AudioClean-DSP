@@ -1257,27 +1257,68 @@ elif workspace.startswith("5"):
                     wf_fir, _, h_db_fir, phi_fir = fir_mod.get_fir_frequency_response(fir_des, worN=2048)
                     wf_iir, _, h_db_iir, phi_iir = iir_mod.get_iir_frequency_response(iir_des, worN=2048)
 
-                    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-                    ax1.plot(wf_fir, h_db_fir, label=f"FIR (M={fir_taps})", color="#1f77b4", lw=1.8)
-                    ax1.plot(wf_iir, h_db_iir, label=f"IIR (N={iir_ord})", color="#ff7f0e", lw=1.8, linestyle="--")
-                    ax1.set_title("Magnitude Response Comparison")
+                    fig, (ax1, ax2) = plt.subplots(
+                        1, 2, figsize=(14, 4.8), facecolor="#FFFFFF",
+                        gridspec_kw={"width_ratios": [1.15, 1.0]}
+                    )
+                    for axis in (ax1, ax2):
+                        vis_mod._style_axes(axis)
+
+                    fir_color, iir_color = "#2563EB", "#D97706"
+                    display_limit = min(sr / 2.0, 8000.0)
+
+                    ax1.plot(
+                        wf_fir, h_db_fir, label=f"FIR · {fir_taps} taps",
+                        color=fir_color, linewidth=2.0, zorder=3
+                    )
+                    ax1.plot(
+                        wf_iir, h_db_iir, label=f"IIR · order {iir_ord}",
+                        color=iir_color, linewidth=2.0, linestyle="--", zorder=3
+                    )
+                    ax1.axhline(
+                        -3.0103, color="#94A3B8", linewidth=1.0,
+                        linestyle=":", label="−3.01 dB reference"
+                    )
+                    ax1.axhline(
+                        -6.0206, color="#CBD5E1", linewidth=1.0,
+                        linestyle="-.", label="−6.02 dB reference"
+                    )
+                    cutoff_values = comp_cutoff if isinstance(comp_cutoff, (list, tuple)) else [comp_cutoff]
+                    for cutoff_value in cutoff_values:
+                        ax1.axvline(
+                            float(cutoff_value), color="#64748B", linewidth=1.0,
+                            linestyle=":", alpha=0.8
+                        )
+                    ax1.set_title("Magnitude response", loc="left", fontsize=12, fontweight="bold", color="#14243B", pad=12)
                     ax1.set_xlabel("Frequency (Hz)")
                     ax1.set_ylabel("Magnitude (dB)")
                     ax1.set_ylim(-80, 5)
-                    ax1.set_xlim(0, min(sr // 2, 8000))
-                    ax1.grid(True, alpha=0.3)
-                    ax1.legend()
+                    ax1.set_xlim(0, display_limit)
+                    ax1.legend(loc="lower right", fontsize=8, ncol=2, frameon=True,
+                               facecolor="#FFFFFF", edgecolor="#DCE4EF", framealpha=0.96)
 
-                    ax2.plot(wf_fir, phi_fir, label="FIR Phase", color="#1f77b4", lw=1.8)
-                    ax2.plot(wf_iir, phi_iir, label="IIR Phase", color="#ff7f0e", lw=1.8, linestyle="--")
-                    ax2.set_title("Phase Response Comparison")
+                    ax2.plot(
+                        wf_fir, phi_fir, label="FIR phase",
+                        color=fir_color, linewidth=1.9
+                    )
+                    ax2.plot(
+                        wf_iir, phi_iir, label="IIR phase",
+                        color=iir_color, linewidth=1.9, linestyle="--"
+                    )
+                    ax2.set_title("Phase response", loc="left", fontsize=12, fontweight="bold", color="#14243B", pad=12)
                     ax2.set_xlabel("Frequency (Hz)")
                     ax2.set_ylabel("Phase (radians)")
-                    ax2.set_xlim(0, min(sr // 2, 8000))
-                    ax2.grid(True, alpha=0.3)
-                    ax2.legend()
-                    fig.tight_layout()
-                    st.pyplot(fig)
+                    ax2.set_xlim(0, display_limit)
+                    ax2.legend(loc="best", fontsize=8, frameon=True,
+                               facecolor="#FFFFFF", edgecolor="#DCE4EF", framealpha=0.96)
+
+                    fig.suptitle(
+                        f"{comp_type.capitalize()} filter architecture comparison",
+                        fontsize=13, fontweight="bold", color="#14243B",
+                        x=0.06, ha="left"
+                    )
+                    fig.tight_layout(rect=(0, 0, 1, 0.94))
+                    st.pyplot(fig, use_container_width=True)
                     plt.close(fig)
 
 # =============================================================================
