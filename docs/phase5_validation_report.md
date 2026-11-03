@@ -7,7 +7,7 @@ The objective of Phase 5 is to execute a complete, independent engineering valid
 1. Core DSP mathematical correctness and numerical stability.
 2. End-to-end user workflows in the Streamlit application (`app.py`).
 3. Regression test suite execution across all modules.
-4. Stress, performance, and latency scaling from short signals up to 60-second real-world recordings.
+4. Stress, performance, and latency scaling from short signals up to 60-second recordings under controlled experimental conditions.
 5. Strict enforcement of scientific integrity (no fabricated ground-truth metrics, no artificial alignment, and mathematically grounded filter comparison).
 
 ---
@@ -33,14 +33,14 @@ The test suite was executed using:
 ```
 
 ### Summary of Results:
-- **Total Tests Collected:** 135
-- **Tests Passed:** 135 (100%)
+- **Total Tests Collected:** 139
+- **Tests Passed:** 139 (100%)
 - **Tests Failed:** 0
 - **Tests Skipped:** 0
-- **Total Execution Time:** 5.54 seconds
+- **Total Execution Time:** 6.79 seconds
 - **Exit Code:** 0 (Clean Pass)
 
-### Breakdown by Test Module:
+### Exact Breakdown by Test Module:
 1. `tests/test_audio_io.py`: 12 passed
    - Mono/stereo WAV loading, float64 representation, PCM16 round-trip, clipping protection, non-finite rejection, safe overwrite protection.
 2. `tests/test_preprocessing.py`: 13 passed
@@ -48,9 +48,9 @@ The test suite was executed using:
 3. `tests/test_noise_generator.py`: 7 passed
    - Calibrated White Gaussian Noise (WGN), deterministic seed reproducibility, 50/60 Hz mains hum with harmonic decay, high-frequency tone Nyquist enforcement, composite noise combination with clipping protection.
 4. `tests/test_fir_filters.py`: 20 passed
-   - Type-I linear-phase designs (lowpass, highpass, bandpass, bandstop), Hamming/Hann/Blackman windowing, odd tap enforcement, frequency response calculations, causal constant group delay ($\tau = (M-1)/2$), zero-phase forward-backward filtering.
+   - Type-I linear-phase designs (lowpass, highpass, bandpass, bandstop), Hamming/Hann/Blackman windowing, odd tap enforcement, frequency response calculations, causal constant group delay ($\tau = (M-1)/2$), zero-phase forward-backward filtering. Note: Includes 4 parametrized topology cases and 3 parametrized window cases.
 5. `tests/test_iir_filters.py`: 23 passed
-   - Butterworth SOS designs (orders 1-10), dedicated 50/60 Hz IIR notch filter with configurable $Q$, real-time BIBO pole stability check ($|z_p| < 1$), causal `sosfilt` vs zero-phase `sosfiltfilt`, SciPy SOS padding matching.
+   - Butterworth SOS designs (orders 1-10), dedicated 50/60 Hz IIR notch filter with configurable $Q$, real-time BIBO pole stability check ($|z_p| < 1$), causal `sosfilt` vs zero-phase `sosfiltfilt`, SciPy SOS padding matching. Note: Includes 4 parametrized topology cases.
 6. `tests/test_fft_analysis.py`: 15 passed
    - Single-sided calibrated FFT magnitude spectrum, coherent gain handling, odd and even sample length handling, DC bin preservation, STFT spectrogram calculation (`dBFS/Hz` and `dBFS` units).
 7. `tests/test_metrics.py`: 20 passed
@@ -58,9 +58,9 @@ The test suite was executed using:
 8. `tests/test_comparison.py`: 8 passed
    - Head-to-head `compare_fir_and_iir` execution, topology compatibility enforcement, cutoff alignment verification, shared valid reference interval $[\tau : N - \tau]$ for causal mode, zero-latency speedup ratio calculation.
 9. `tests/test_integration.py`: 2 passed
-   - Complete end-to-end DSP restoration pipeline, quantitative SNR improvement, and RMSE error reduction on compound noise.
-10. `tests/test_app.py`: 5 passed
-    - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, strict external reference upload validation (`validate_reference_match`).
+   - Complete end-to-end DSP pipeline restoration, quantitative SNR improvement, and RMSE error reduction on compound noise.
+10. `tests/test_app.py`: 10 passed
+    - In-memory WAV byte conversion (`audio_to_bytes`), PCM16 clipping safety, SHA-256 file fingerprinting, strict external reference upload validation (`validate_reference_match`), linked gain normalization preserving relative SNR, and interactive `streamlit.testing.v1.AppTest` session state persistence across app reruns.
 
 ---
 
@@ -81,7 +81,7 @@ The test suite was executed using:
 
 ## 5. Streamlit Application Workflow Validation
 
-The application (`app.py`) was verified using headless execution and programmatic verification scripts across four core operational workflows:
+The application (`app.py`) was verified using interactive `streamlit.testing.v1.AppTest`, programmatic verification scripts, and headless launch across four core operational workflows:
 
 ### Workflow A: Clean Ground-Truth Audio (Reference Available)
 - Clean audio ingested and verified.
@@ -99,7 +99,7 @@ The application (`app.py`) was verified using headless execution and programmati
   - Waveform time-domain plots.
   - Calibrated single-sided FFT spectrum.
   - STFT Spectrogram with calibrated units (`dBFS/Hz` or `dBFS`).
-  - Independent filter execution timing via `measure_processing_time()` with speedup ratio.
+  - Independent filter execution timing via `measure_processing_time()` with speedup ratio (displays N/A on invalid latency).
   - Filter magnitude and phase response overlays.
 
 ### Workflow C: Separate External Clean Reference Upload
@@ -107,45 +107,45 @@ The application (`app.py`) was verified using headless execution and programmati
 - Successfully rejected mismatched sample rates (e.g., 44.1 kHz vs 48 kHz).
 - Successfully rejected mismatched sample lengths/channels.
 - Validated clean references attached to enable Workflow A objective metric evaluation.
+- UI explicitly explains that matching sample rate and shape does not guarantee synchronization; the user must supply pre-aligned references.
 
 ### Workflow D: Robust Error Handling
 - Invalid filter cutoffs exceeding Nyquist boundary rejected with clear `ValueError`.
 - Even filter tap counts for Type-I FIR rejected with helpful error guidance.
 - Signals shorter than minimum zero-phase padding rejected safely.
 - Incompatible filter topologies (e.g., lowpass vs highpass) rejected by comparison engine.
+- STFT segment length dynamically adapts to input signal length, preventing crashes on short signals.
 
 ---
 
 ## 6. Performance & Resource Benchmarking
 
-Performance was benchmarked across realistic audio durations ($f_s = 44,100\text{ Hz}$):
+Performance was benchmarked under strictly controlled reproducible conditions using a synthetic composite test signal (440 Hz fundamental + 1200 Hz harmonic with 10 dB target WGN, $f_s = 44,100\text{ Hz}$). Benchmarks were conducted over **30 repetitions** with **5 warm-up iterations**, reporting the exact median execution latency:
 
-| Duration (s) | Sample Count | FIR Zero-Phase | FIR Causal | IIR Zero-Phase | IIR Causal | FFT (Spectrum) | STFT (Spectrogram) | Full Comparison Engine |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1.0 s** | 44,100 | 3.35 ms | 1.35 ms | 1.21 ms | 0.55 ms | 3.03 ms | 2.11 ms | 57.51 ms |
-| **5.0 s** | 220,500 | 19.04 ms | 9.43 ms | 6.64 ms | 3.42 ms | 16.86 ms | 16.37 ms | 357.57 ms |
-| **30.0 s** | 1,323,000 | 112.23 ms | 54.36 ms | 39.35 ms | 20.85 ms | 114.40 ms | 105.84 ms | 2,137.05 ms |
-| **60.0 s** | 2,646,000 | 219.92 ms | 128.64 ms | 89.71 ms | 42.63 ms | 224.41 ms | 236.05 ms | 4,205.99 ms |
+| Signal Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1.0 s** | 44,100 | 3.15 ms | 1.44 ms | 1.01 ms | 0.55 ms | 2.54 ms | 1.75 ms | **3.13x** | **2.61x** |
+| **5.0 s** | 220,500 | 18.22 ms | 9.00 ms | 6.17 ms | 3.06 ms | 14.81 ms | 14.83 ms | **2.95x** | **2.94x** |
+| **30.0 s** | 1,323,000 | 103.11 ms | 53.45 ms | 35.14 ms | 18.58 ms | 105.58 ms | 97.38 ms | **2.93x** | **2.88x** |
+| **60.0 s** | 2,646,000 | 214.47 ms | 112.04 ms | 69.05 ms | 35.82 ms | 202.63 ms | 183.90 ms | **3.11x** | **3.13x** |
 
-### Engineering Observations:
-- **Throughput:** All filter operations execute substantially faster than real-time (processing a 60-second audio stream takes < 220 ms for FIR and < 90 ms for IIR).
-- **Computational Efficiency:** IIR Butterworth filters in Second-Order Sections (SOS) consistently deliver a **$2.5\times$ to $3.0\times$ speedup** over 101-tap FIR filters.
-- **Linear Scaling:** Latency scales strictly linearly $O(N)$ with audio signal length across both filter topologies and spectral transforms.
+### Engineering Observations & Complexity Analysis:
+- **Configuration Specificity:** These results evaluate a specific architectural pairing: a 101-tap Type-I windowed FIR filter versus a 4th-order (2-section) Butterworth IIR filter. They demonstrate the computational efficiency of low-order IIR recursion compared to high-tap FIR convolution, but do not imply that every IIR filter is universally faster than every FIR filter under all design specifications.
+- **Observed Scaling:** Across the four tested sample sizes ($N = 44.1\text{k}$ to $2.65\text{M}$ samples), execution time scales in close proportion to signal length $N$.
+- **Real-Time Factor:** For all tested durations, processing latency is orders of magnitude lower than audio duration (e.g., 60 seconds of audio is filtered in ~112 ms causally by FIR and ~36 ms by IIR).
 
 ---
 
-## 7. Defects Discovered & Remediated
-During Phase 5 testing of `app.py`:
-- **Defect 1:** `measure_processing_time` dictionary key access in `app.py` attempted to access `["median"]` instead of `["median_ms"]`.
-  - *Fix:* Updated `app.py` lines 903-904 to access `t_fir["median_ms"]` and `t_iir["median_ms"]`.
-- **Defect 2:** Audio metadata dictionary key in `app.py` attempted to access `["rms_level"]` instead of `["rms_amplitude"]`.
-  - *Fix:* Updated `app.py` line 271 to access `info["rms_amplitude"]`.
-- **Regression Protection:** Added `tests/test_app.py` with 5 automated unit tests covering app helper contracts, PCM16 conversion, and reference validation.
+## 7. Remediation Summary
+- **Defect 1 (Upload Rerun State):** Upload state now preserved across reruns via SHA-256 content hashing. Working audio and noise components no longer reset on UI interaction.
+- **Defect 2 (Linked Gain Normalization):** Added `apply_linked_normalization()`, scaling clean reference and noisy audio by the exact identical scalar gain, preserving relative SNR and RMSE reduction %.
+- **Defect 3 (Technical Descriptions):** Clarified offline non-causal nature of `filtfilt`, exact linear-phase group delay of causal FIR, and distinct character of narrowband IIR notch filters.
+- **Defect 4 (Short Audio in STFT):** Segment length (`nperseg`) dynamically constrained to signal length, preventing crashes on short audio.
 
 ---
 
 ## 8. Scientific Integrity & Documented Limitations
-1. **Cutoff Conventions:** Windowed FIR specifies the $-6.02\text{ dB}$ (half-amplitude $|H|=0.5$) transition midpoint, whereas Butterworth IIR specifies $-3.01\text{ dB}$ (half-power $|H|=1/\sqrt{2}$). The comparison engine strictly documents this difference.
+1. **Cutoff Conventions:** Windowed FIR specifies the $-6.02\text{ dB}$ (half-amplitude $|H|=0.5$) transition midpoint, whereas Butterworth IIR specifies $-3.01\text{ dB}$ (half-power $|H|=1/\sqrt{2}$).
 2. **Causal Evaluation Interval:** In causal FIR mode, evaluation is strictly constrained to the valid middle interval $[\tau : N - \tau]$ ($N - 2\tau$ samples) to guarantee identical sample correspondence between FIR and IIR without invalid startup boundary bias.
 3. **No Fabricated Metrics:** When real-world noisy audio is processed without a clean reference (Workflow B), objective restoration metrics are omitted entirely.
 
@@ -153,6 +153,6 @@ During Phase 5 testing of `app.py`:
 
 ## 9. Phase 5 Exit Gate Verdict
 **STATUS: PASSED (COMPLETE)**
-- All 135 tests passing cleanly.
+- All 139 tests passing cleanly.
 - Streamlit application launches and operates without exceptions.
-- Mathematical validation, performance scaling, and defect remediation verified.
+- Mathematical validation, reproducible 30-trial performance benchmarking, and defect remediation verified.

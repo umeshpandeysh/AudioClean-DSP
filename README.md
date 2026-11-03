@@ -1,9 +1,8 @@
 ﻿# AudioClean DSP — Digital Audio Noise Removal & Comparative Filter Performance Analysis
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-1.66.1-red.svg)](https://streamlit.io/)
-[![Tests Passing](https://img.shields.io/badge/pytest-135%20passed-brightgreen.svg)](https://pytest.org/)
+[![Tests Passing](https://img.shields.io/badge/pytest-139%20passed-brightgreen.svg)](https://pytest.org/)
 
 **AudioClean DSP** is a comprehensive undergraduate Digital Signal Processing (DSP) engineering application and laboratory workbench designed for digital audio noise removal and rigorous, scientifically grounded comparative performance analysis between **Finite Impulse Response (FIR)** and **Infinite Impulse Response (IIR)** digital filters.
 
@@ -23,7 +22,7 @@ AudioClean DSP bridges theory and practical implementation by providing:
 - **Calibrated Digital Filter Designers:** Windowed Type-I FIR and Second-Order Sections (SOS) Butterworth/Notch IIR filters.
 - **Scientifically Grounded Head-to-Head Comparison:** Strict enforcement of cutoff alignment and causal evaluation intervals that account for filter startup transients and group delay.
 - **Dual Analytical Workflows:** Clear separation between ground-truth reference restoration (Workflow A) and single-file real-world degraded analysis (Workflow B).
-- **Interactive Engineering Dashboard:** An intuitive, full-featured Streamlit dashboard for real-time visualization, playback, and analysis.
+- **Interactive Engineering Dashboard:** An intuitive, full-featured Streamlit dashboard for real-time visualization, playback, and analysis with state persistence across reruns.
 
 ---
 
@@ -31,7 +30,7 @@ AudioClean DSP bridges theory and practical implementation by providing:
 
 - **Audio Ingestion & Signal Preprocessing:**
   - Robust ingestion of single-channel (mono) and multi-channel (stereo) `.wav` files in 64-bit floating-point precision.
-  - Safe channel downmixing to mono and peak normalization to 0 dBFS.
+  - Safe channel downmixing to mono and peak normalization with linked gain scaling across clean and degraded signals.
   - Signal validation catching non-finite samples (`NaN`, `Inf`), invalid sampling rates, and empty arrays.
 - **Controlled Noise Generation Engine:**
   - White Gaussian Noise (WGN) calibrated to exact target Signal-to-Noise Ratio (SNR in dB) with random seed control.
@@ -41,13 +40,13 @@ AudioClean DSP bridges theory and practical implementation by providing:
 - **FIR Filter Design & Execution:**
   - Type-I linear-phase designs: Lowpass, Highpass, Bandpass, and Bandstop.
   - Standard classical windows: Hamming, Hann, and Blackman.
-  - Dual operational modes: Causal filtering (`scipy.signal.lfilter` with exact group delay $\tau = (M-1)/2$) and Zero-Phase filtering (`scipy.signal.filtfilt`).
+  - Dual operational modes: Causal filtering (`scipy.signal.lfilter` with exact group delay $\tau = (M-1)/2$) and Zero-Phase filtering (`scipy.signal.filtfilt`, offline two-pass forward-backward).
 - **IIR Filter Design & SOS Stability Verification:**
   - Butterworth standard filters (Lowpass, Highpass, Bandpass, Bandstop) with orders from 1 to 10.
   - Second-Order Sections (SOS) representation eliminating coefficient quantization sensitivity.
   - Real-time Bounded-Input Bounded-Output (BIBO) pole stability checking ($|z_p| < 1.0$).
   - Dedicated high-Q IIR Notch filter for power-line hum rejection (> 35 dB attenuation).
-  - Causal (`sosfilt`) and Zero-Phase forward-backward (`sosfiltfilt`) filtering.
+  - Causal (`sosfilt`, real-time with non-linear phase) and Zero-Phase forward-backward (`sosfiltfilt`) filtering.
 - **Rigorous Comparative Benchmark Engine:**
   - Automatic topology and cutoff parameter compatibility checks.
   - Causal FIR group-delay alignment using a shared valid reference interval $[\tau : N - \tau]$ ($N - 2\tau$ samples).
@@ -55,7 +54,7 @@ AudioClean DSP bridges theory and practical implementation by providing:
   - Comprehensive comparison matrix: Output SNR, $\Delta\text{SNR}$ improvement, Output RMSE, RMSE reduction percentage, and MAE.
 - **Spectral Diagnostics & Time-Frequency Analysis:**
   - Single-sided calibrated FFT magnitude spectrum (dBFS or linear) with peak frequency detection.
-  - Short-Time Fourier Transform (STFT) spectrogram with physically accurate units: $\text{dBFS/Hz}$ (power spectral density) or $\text{dBFS}$ (spectrum).
+  - Short-Time Fourier Transform (STFT) spectrogram with physically accurate units: $\text{dBFS/Hz}$ (power spectral density) or $\text{dBFS}$ (spectrum), with dynamic segment sizing preventing crashes on short audio.
 
 ---
 
@@ -100,28 +99,33 @@ AudioClean-DSP/
 │   ├── metrics.py             # SNR, RMSE, MAE, and timing measurement harness
 │   └── comparison.py          # Rigorous FIR vs. IIR head-to-head comparison engine
 │
-├── tests/                     # Automated Test Suite (135 tests)
+├── tests/                     # Automated Test Suite (139 tests)
 │   ├── __init__.py
 │   ├── conftest.py            # Shared fixtures and synthesized test signals
-│   ├── test_audio_io.py       # Audio I/O unit tests
-│   ├── test_preprocessing.py  # Preprocessing and validation tests
-│   ├── test_noise_generator.py# Noise synthesis and calibration tests
-│   ├── test_fir_filters.py    # FIR design, symmetry, and filtering tests
-│   ├── test_iir_filters.py    # IIR design, SOS stability, and notch tests
-│   ├── test_fft_analysis.py   # FFT calibration and spectrogram tests
-│   ├── test_metrics.py        # Objective metric mathematical accuracy tests
-│   ├── test_comparison.py     # Comparison engine and interval validation tests
-│   ├── test_integration.py    # Full end-to-end DSP pipeline integration tests
-│   └── test_app.py            # Streamlit application helper contract tests
+│   ├── test_audio_io.py       # Audio I/O unit tests (12 tests)
+│   ├── test_preprocessing.py  # Preprocessing and validation tests (13 tests)
+│   ├── test_noise_generator.py# Noise synthesis and calibration tests (7 tests)
+│   ├── test_fir_filters.py    # FIR design, symmetry, and filtering tests (20 tests)
+│   ├── test_iir_filters.py    # IIR design, SOS stability, and notch tests (23 tests)
+│   ├── test_fft_analysis.py   # FFT calibration and spectrogram tests (15 tests)
+│   ├── test_metrics.py        # Objective metric mathematical accuracy tests (20 tests)
+│   ├── test_comparison.py     # Comparison engine and interval validation tests (8 tests)
+│   ├── test_integration.py    # Full end-to-end DSP pipeline integration tests (2 tests)
+│   └── test_app.py            # Streamlit application helper contract & AppTest tests (10 tests)
 │
 ├── docs/                      # Engineering Documentation
 │   ├── architecture.md        # System architecture specification
 │   ├── dsp_methodology.md     # Mathematical theory and DSP formulations
+│   ├── phase4_remediation_report.md # Phase 4 remediation details
 │   ├── phase5_validation_report.md # Phase 5 validation report and benchmarks
-│   └── test_coverage_matrix.md     # Traceability coverage matrix
+│   ├── test_coverage_matrix.md     # Traceability coverage matrix
+│   └── final_delivery_report.md    # Final project closure report
 │
 ├── scripts/                   # Verification Scripts
-│   └── verify_audit_remediation.py # 6-experiment mathematical verification pipeline
+│   ├── verify_audit_remediation.py # 6-experiment mathematical verification pipeline
+│   ├── verify_phase2.py
+│   ├── verify_phase4_5.py
+│   └── verify_phase6.py
 │
 └── results/                   # Experimental Artifacts
     ├── audio/                 # Output audio demonstration files
@@ -165,7 +169,7 @@ python -m streamlit run app.py
 Open your browser to `http://localhost:8501`.
 
 ### Navigating the Six Engineering Workspaces:
-1. **Audio Workspace:** Ingest mono/stereo WAV files, toggle between Workflow A (clean ground truth) and Workflow B (real-world degraded), inspect audio metadata, listen to playback, downmix to mono, or normalize peak amplitude.
+1. **Audio Workspace:** Ingest mono/stereo WAV files, toggle between Workflow A (clean ground truth) and Workflow B (real-world degraded), inspect audio metadata, listen to playback, downmix to mono, or normalize peak amplitude using linked gain scaling.
 2. **Noise Generation Engine:** Synthesize calibrated White Gaussian Noise at target SNR, 50/60 Hz mains hum with harmonics, high-frequency tones, or composite noise combinations.
 3. **FIR Filter Designer:** Configure lowpass, highpass, bandpass, or bandstop filters with selectable window functions and tap lengths; inspect magnitude and linear phase responses; compare causal vs. zero-phase audio.
 4. **IIR Filter Designer:** Design Butterworth filters in Second-Order Sections (SOS) or dedicated 50/60 Hz hum notch filters; verify pole stability ($|z_p| < 1.0$); listen to and download filtered audio.
@@ -176,7 +180,7 @@ Open your browser to `http://localhost:8501`.
 
 ## 7. Running the Automated Test Suite
 
-Run all 135 unit, integration, and contract tests:
+Run all 139 unit, integration, and contract tests:
 ```powershell
 python -m pytest -v tests
 ```
@@ -195,14 +199,16 @@ python scripts/verify_audit_remediation.py
 
 ## 8. Quantitative Performance Summary
 
-Benchmark measurements performed on 64-bit Windows AMD64 ($f_s = 44,100\text{ Hz}$):
+Benchmark measurements performed on 64-bit Windows AMD64 using 30 trials with 5 warm-up iterations on synthetic composite test signals ($f_s = 44,100\text{ Hz}$):
 
-| Audio Duration | Sample Count | FIR Zero-Phase | FIR Causal | IIR Zero-Phase | IIR Causal | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1.0 s** | 44,100 | 3.35 ms | 1.35 ms | 1.21 ms | 0.55 ms | 3.03 ms | 2.11 ms | **2.5x - 2.8x** |
-| **5.0 s** | 220,500 | 19.04 ms | 9.43 ms | 6.64 ms | 3.42 ms | 16.86 ms | 16.37 ms | **2.7x - 2.9x** |
-| **30.0 s** | 1,323,000 | 112.23 ms | 54.36 ms | 39.35 ms | 20.85 ms | 114.40 ms | 105.84 ms | **2.6x - 2.8x** |
-| **60.0 s** | 2,646,000 | 219.92 ms | 128.64 ms | 89.71 ms | 42.63 ms | 224.41 ms | 236.05 ms | **2.5x - 3.0x** |
+| Audio Duration | Sample Count | FIR Zero-Phase (101 taps) | FIR Causal (101 taps) | IIR Zero-Phase (Order 4 SOS) | IIR Causal (Order 4 SOS) | FFT (Spectrum) | STFT (Spectrogram) | IIR Speedup (Zero-Phase) | IIR Speedup (Causal) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1.0 s** | 44,100 | 3.15 ms | 1.44 ms | 1.01 ms | 0.55 ms | 2.54 ms | 1.75 ms | **3.13x** | **2.61x** |
+| **5.0 s** | 220,500 | 18.22 ms | 9.00 ms | 6.17 ms | 3.06 ms | 14.81 ms | 14.83 ms | **2.95x** | **2.94x** |
+| **30.0 s** | 1,323,000 | 103.11 ms | 53.45 ms | 35.14 ms | 18.58 ms | 105.58 ms | 97.38 ms | **2.93x** | **2.88x** |
+| **60.0 s** | 2,646,000 | 214.47 ms | 112.04 ms | 69.05 ms | 35.82 ms | 202.63 ms | 183.90 ms | **3.11x** | **3.13x** |
+
+*Note on Configuration Specificity:* These benchmarks reflect the specific comparison between a 101-tap FIR filter and a 4th-order Butterworth IIR filter. They demonstrate the recursion efficiency of low-order IIR sections compared to high-tap FIR convolution, but do not imply universal superiority under all filter specifications.
 
 ---
 
@@ -213,7 +219,7 @@ Benchmark measurements performed on 64-bit Windows AMD64 ($f_s = 44,100\text{ Hz
 
 ---
 
-## 10. Authors & Acknowledgements
+## 10. Academic Context & Project Metadata
 - **Author:** Umesh Pandey (Undergraduate Engineering Project)
 - **Institution:** Department of Electronics & Communication Engineering
 - **Supervision:** Digital Signal Processing Laboratory

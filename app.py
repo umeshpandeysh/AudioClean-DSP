@@ -1,8 +1,9 @@
-"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
+﻿"""AudioClean DSP — Interactive Digital Filter and Noise Removal Engineering Application.
 
 Phase 4 Implementation for AudioClean DSP.
 """
 
+import hashlib
 import io
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -58,7 +59,7 @@ st.markdown(
 )
 
 # -----------------------------------------------------------------------------
-# Helper Functions: Audio In-Memory Encoding and Validation
+# Helper Functions: Audio In-Memory Encoding, Fingerprinting and Normalization
 # -----------------------------------------------------------------------------
 def audio_to_bytes(data: np.ndarray, sample_rate: int) -> bytes:
     """Encode floating-point audio data into in-memory 16-bit PCM WAV bytes without normalization."""
@@ -89,6 +90,11 @@ def render_download_button(
     )
 
 
+def compute_file_hash(raw_bytes: bytes) -> str:
+    """Compute stable SHA-256 fingerprint for uploaded file data."""
+    return hashlib.sha256(raw_bytes).hexdigest()
+
+
 def validate_reference_match(
     reference: np.ndarray, ref_sr: int, noisy: np.ndarray, noisy_sr: int
 ) -> Tuple[bool, str]:
@@ -109,6 +115,26 @@ def validate_reference_match(
     return True, ""
 
 
+def apply_linked_normalization(
+    noisy_audio: np.ndarray,
+    reference_audio: Optional[np.ndarray],
+    audio_data: Optional[np.ndarray],
+    target_peak: float = 1.0,
+) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float]:
+    """Normalize noisy audio to target_peak and scale linked reference audio by the EXACT same gain factor.
+
+    This strictly preserves relative gain, SNR, RMSE reduction %, and MAE relationships.
+    """
+    max_val = float(np.max(np.abs(noisy_audio)))
+    if max_val == 0.0 or not np.isfinite(max_val):
+        return noisy_audio, reference_audio, audio_data, 1.0
+
+    gain = float(target_peak / max_val)
+    norm_noisy = noisy_audio * gain
+    norm_ref = reference_audio * gain if reference_audio is not None else None
+    norm_data = audio_data * gain if audio_data is not None else None
+    return norm_noisy, norm_ref, norm_data, gain
+
 # -----------------------------------------------------------------------------
 # Session State Initialization
 # -----------------------------------------------------------------------------
@@ -124,6 +150,12 @@ if "noisy_audio" not in st.session_state:
     st.session_state.noisy_audio = None
 if "noise_component" not in st.session_state:
     st.session_state.noise_component = None
+if "primary_file_hash" not in st.session_state:
+    st.session_state.primary_file_hash = None
+if "ref_file_hash" not in st.session_state:
+    st.session_state.ref_file_hash = None
+if "active_ingest_mode" not in st.session_state:
+    st.session_state.active_ingest_mode = "Workflow A"
 
 # Synthesize default demo tone if no audio loaded
 if st.session_state.audio_data is None:
@@ -206,52 +238,84 @@ if workspace.startswith("1"):
                 "Workflow A: Clean Audio (Ground-truth available; enable noise synthesis and objective metrics)",
                 "Workflow B: Real-World Degraded Audio (No ground-truth; no-reference evaluation)",
             ],
-            index=0 if st.session_state.source_type != "noisy_upload" else 1,
+            index=0 if st.session_state.active_ingest_mode == "Workflow A" else 1,
         )
 
-        uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"])
-        if uploaded_file is not None:
-            try:
-                data, in_sr = sf.read(uploaded_file, dtype="float64")
-                pre_mod.validate_audio(data, in_sr)
-                st.session_state.sample_rate = in_sr
+        selected_mode_key = "Workflow A" if "Workflow A" in ingest_mode else "Workflow B"
 
-                if "Workflow A" in ingest_mode:
-                    st.session_state.audio_data = data
-                    st.session_state.reference_audio = data.copy()
-                    st.session_state.noisy_audio = data.copy()
-                    st.session_state.source_type = "clean_upload"
-                    st.success(f"Successfully loaded Clean Reference audio ({in_sr:,} Hz, shape: {data.shape})")
-                else:
-                    st.session_state.audio_data = data
-                    st.session_state.reference_audio = None
-                    st.session_state.noisy_audio = data.copy()
-                    st.session_state.source_type = "noisy_upload"
-                    st.success(f"Successfully loaded Real-World Degraded audio ({in_sr:,} Hz, shape: {data.shape})")
-            except Exception as e:
-                st.error(f"Failed to load audio file: {e}")
+        # Detect ingest mode change
+        if selected_mode_key != st.session_state.active_ingest_mode:
+            st.session_state.active_ingest_mode = selected_mode_key
+            st.session_state.ref_file_hash = None
+            if selected_mode_key == "Workflow A":
+                st.session_state.source_type = "clean_upload" if st.session_state.primary_file_hash else "synthetic"
+                st.session_state.reference_audio = (
+                    st.session_state.audio_data.copy() if st.session_state.audio_data is not None else None
+                )
+            else:
+                st.session_state.source_type = "noisy_upload"
+                st.session_state.reference_audio = None
+            st.rerun()
+
+        uploaded_file = st.file_uploader("Upload Audio Recording (.wav)", type=["wav"], key="primary_audio_uploader")
+        if uploaded_file is not None:
+            raw_bytes = uploaded_file.getvalue()
+            f_hash = compute_file_hash(raw_bytes)
+
+            # Reinitialize ONLY when a new file is uploaded
+            if f_hash != st.session_state.primary_file_hash:
+                try:
+                    buf = io.BytesIO(raw_bytes)
+                    data, in_sr = sf.read(buf, dtype="float64")
+                    pre_mod.validate_audio(data, in_sr)
+                    st.session_state.sample_rate = in_sr
+                    st.session_state.primary_file_hash = f_hash
+                    st.session_state.ref_file_hash = None  # Clear any stale reference
+                    st.session_state.noise_component = None
+
+                    if selected_mode_key == "Workflow A":
+                        st.session_state.audio_data = data
+                        st.session_state.reference_audio = data.copy()
+                        st.session_state.noisy_audio = data.copy()
+                        st.session_state.source_type = "clean_upload"
+                        st.success(f"Loaded new Clean Reference audio ({in_sr:,} Hz, shape: {data.shape})")
+                    else:
+                        st.session_state.audio_data = data
+                        st.session_state.reference_audio = None
+                        st.session_state.noisy_audio = data.copy()
+                        st.session_state.source_type = "noisy_upload"
+                        st.success(f"Loaded new Real-World Degraded audio ({in_sr:,} Hz, shape: {data.shape})")
+                except Exception as e:
+                    st.error(f"Failed to load audio file: {e}")
 
         # Optional separate clean reference for Workflow B
-        if st.session_state.source_type == "noisy_upload":
+        if selected_mode_key == "Workflow B":
             st.markdown("#### Optional Ground-Truth Reference Upload")
             st.caption(
                 "If you have an independent, synchronized clean reference for this degraded recording, "
-                "upload it below. Sample rate and shape must match exactly."
+                "upload it below. Note: Matching sample rate and shape does not guarantee synchronization; "
+                "the user must ensure the reference is aligned."
             )
             ref_file = st.file_uploader("Upload Reference Audio (.wav)", type=["wav"], key="ref_uploader")
             if ref_file is not None:
-                try:
-                    ref_data, ref_sr = sf.read(ref_file, dtype="float64")
-                    valid, msg = validate_reference_match(
-                        ref_data, ref_sr, st.session_state.noisy_audio, st.session_state.sample_rate
-                    )
-                    if valid:
-                        st.session_state.reference_audio = ref_data
-                        st.success("Clean reference attached! Workflow A objective metrics enabled.")
-                    else:
-                        st.error(f"Reference rejected: {msg}")
-                except Exception as e:
-                    st.error(f"Failed to load reference: {e}")
+                r_bytes = ref_file.getvalue()
+                r_hash = compute_file_hash(r_bytes)
+                if r_hash != st.session_state.ref_file_hash:
+                    try:
+                        r_buf = io.BytesIO(r_bytes)
+                        ref_data, ref_sr = sf.read(r_buf, dtype="float64")
+                        valid, msg = validate_reference_match(
+                            ref_data, ref_sr, st.session_state.noisy_audio, st.session_state.sample_rate
+                        )
+                        if valid:
+                            st.session_state.reference_audio = ref_data
+                            st.session_state.ref_file_hash = r_hash
+                            st.success("Clean reference attached! Workflow A objective metrics enabled.")
+                        else:
+                            st.session_state.ref_file_hash = None
+                            st.error(f"Reference rejected: {msg}")
+                    except Exception as e:
+                        st.error(f"Failed to load reference: {e}")
 
     with col_up2:
         st.subheader("Preprocessing and Controls")
@@ -288,9 +352,17 @@ if workspace.startswith("1"):
                     st.button("Mono Signal (Downmix Inactive)", disabled=True, use_container_width=True)
 
             with c2:
-                if st.button("Normalize to 0 dBFS (Peak 1.0)", use_container_width=True):
-                    st.session_state.noisy_audio = pre_mod.normalize_audio(st.session_state.noisy_audio, 1.0)
-                    st.success("Signal normalized to peak 1.0.")
+                if st.button("Normalize Signal (Linked Gain)", use_container_width=True):
+                    norm_n, norm_r, norm_d, g = apply_linked_normalization(
+                        st.session_state.noisy_audio,
+                        st.session_state.reference_audio,
+                        st.session_state.audio_data,
+                        target_peak=1.0,
+                    )
+                    st.session_state.noisy_audio = norm_n
+                    st.session_state.reference_audio = norm_r
+                    st.session_state.audio_data = norm_d
+                    st.success(f"Signal normalized (gain: {g:.3f}x). Relative reference gain preserved.")
                     st.rerun()
 
             st.markdown("#### Audio Player")
@@ -503,8 +575,8 @@ elif workspace.startswith("3"):
             mode_fir = st.radio(
                 "Filtering Mode:",
                 [
-                    "zero_phase (filtfilt: zero latency, double roll-off)",
-                    "causal (lfilter: linear phase, exact group delay tau = (M-1)/2)",
+                    "zero_phase (filtfilt: offline non-causal forward-backward, zero phase shift)",
+                    "causal (lfilter: real-time causal, strictly linear phase, group delay tau = (M-1)/2)",
                 ],
                 index=0,
             )
@@ -669,8 +741,8 @@ elif workspace.startswith("4"):
                 mode_iir = st.radio(
                     "Filtering Mode:",
                     [
-                        "zero_phase (sosfiltfilt: forward-backward, zero phase, double order)",
-                        "causal (sosfilt: real-time causal, minimum latency, non-linear phase)",
+                        "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
+                        "causal (sosfilt: real-time causal, minimum latency, non-linear phase response)",
                     ],
                     index=0,
                 )
@@ -683,6 +755,8 @@ elif workspace.startswith("4"):
                     st.error(f"IIR Design Error: {e}")
                     design_ok = False
 
+                convention_text = "Butterworth -3.01 dB (|H|=1/sqrt(2))"
+
             else:
                 f_type = "notch"
                 notch_f = st.slider("Notch Center Frequency (Hz):", min_value=20.0, max_value=500.0, value=50.0, step=1.0)
@@ -691,8 +765,8 @@ elif workspace.startswith("4"):
                 mode_iir = st.radio(
                     "Filtering Mode:",
                     [
-                        "zero_phase (sosfiltfilt: zero phase distortion)",
-                        "causal (sosfilt: causal real-time)",
+                        "zero_phase (sosfiltfilt: offline non-causal forward-backward, zero phase shift)",
+                        "causal (sosfilt: real-time causal, non-linear phase response)",
                     ],
                     index=0,
                 )
@@ -706,12 +780,14 @@ elif workspace.startswith("4"):
                     st.error(f"Notch Design Error: {e}")
                     design_ok = False
 
+                convention_text = f"Narrowband notch rejection null at f0 = {notch_f:.1f} Hz (Q = {q_factor:.1f})"
+
             if design_ok:
                 is_stable, max_pole = iir_mod.check_sos_stability(iir_design.sos)
                 st.markdown(
                     f"- **SOS Sections:** `{iir_design.sos.shape[0]}`\n"
                     f"- **BIBO Stability:** `{'STABLE' if is_stable else 'UNSTABLE'}` (Max pole |z| = `{max_pole:.5f}`)\n"
-                    f"- **Cutoff Convention:** Butterworth -3.01 dB (|H|=1/sqrt(2))"
+                    f"- **Design Target:** `{convention_text}`"
                 )
 
         with col_res:
@@ -866,6 +942,7 @@ elif workspace.startswith("5"):
                     if comp_success:
                         st.markdown("### 📊 Benchmark Results Table")
 
+                        speedup_str = f"{report.speedup_ratio:.2f}x" if report.speedup_ratio > 0 else "N/A"
                         summary_md = f"""
 | Metric / Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Delta / Comparison |
 | :--- | :--- | :--- | :--- |
@@ -873,10 +950,10 @@ elif workspace.startswith("5"):
 | **Evaluation Interval** | `{report.evaluation_interval}` | `{report.evaluation_interval}` | Valid Sample Alignment |
 | **Output SNR (dB)** | **{report.fir_metrics.output_snr_db:.2f} dB** | **{report.iir_metrics.output_snr_db:.2f} dB** | {report.fir_metrics.output_snr_db - report.iir_metrics.output_snr_db:+.2f} dB |
 | **SNR Improvement (Delta SNR)** | **{report.fir_metrics.snr_improvement_db:+.2f} dB** | **{report.iir_metrics.snr_improvement_db:+.2f} dB** | {report.fir_metrics.snr_improvement_db - report.iir_metrics.snr_improvement_db:+.2f} dB |
-| **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.iir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
+| **Output RMSE** | `{report.fir_metrics.output_rmse:.4f}` | `{report.fir_metrics.output_rmse:.4f}` | {report.fir_metrics.output_rmse - report.iir_metrics.output_rmse:+.4f} |
 | **RMSE Reduction (%)** | **{report.fir_metrics.rmse_reduction_percent:.2f}%** | **{report.iir_metrics.rmse_reduction_percent:.2f}%** | {report.fir_metrics.rmse_reduction_percent - report.iir_metrics.rmse_reduction_percent:+.2f}% |
 | **Mean Absolute Error (MAE)** | `{report.fir_metrics.mae:.4f}` | `{report.iir_metrics.mae:.4f}` | {report.fir_metrics.mae - report.iir_metrics.mae:+.4f} |
-| **Median Execution Time** | `{report.fir_metrics.execution_time_ms:.3f} ms` | `{report.iir_metrics.execution_time_ms:.3f} ms` | **Speedup Ratio: {report.speedup_ratio:.2f}x** |
+| **Median Execution Time** | `{report.fir_metrics.execution_time_ms:.3f} ms` | `{report.iir_metrics.execution_time_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
 | **Filter Stability** | Unconditionally Stable | BIBO Stable (SOS) | Verified |
 """
                         st.markdown(summary_md)
@@ -902,7 +979,11 @@ elif workspace.startswith("5"):
 
                         fir_ms = t_fir["median_ms"]
                         iir_ms = t_iir["median_ms"]
-                        speedup = fir_ms / iir_ms if iir_ms > 0 else 1.0
+                        speedup_val = fir_ms / iir_ms if iir_ms > 0 else None
+                        speedup_str = f"{speedup_val:.2f}x" if speedup_val is not None else "N/A"
+
+                        phase_note_fir = "Linear Phase (Group delay tau = (M-1)/2)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
+                        phase_note_iir = "Non-linear Phase (Frequency-dependent group delay)" if comp_mode == "causal" else "Zero Phase (Offline forward-backward)"
 
                     summary_md = f"""
 | Parameter | FIR ({fir_win.capitalize()}, M={fir_taps}) | IIR (Butterworth, N={iir_ord}) | Comparison |
@@ -910,8 +991,8 @@ elif workspace.startswith("5"):
 | **Filtering Mode** | `{comp_mode}` | `{comp_mode}` | Matched |
 | **Ground Truth Reference** | Not Available | Not Available | Reference-based error metrics suppressed |
 | **Filter Topology** | `{comp_type.capitalize()}` | `{comp_type.capitalize()}` | Matched |
-| **Median Execution Time** | `{fir_ms:.3f} ms` | `{iir_ms:.3f} ms` | **Speedup Ratio: {speedup:.2f}x** |
-| **Phase Linearity** | Linear (Constant Group Delay) | Non-linear (Phase Distortion in causal) | FIR provides zero phase distortion |
+| **Median Execution Time** | `{fir_ms:.3f} ms` | `{iir_ms:.3f} ms` | **Speedup Ratio: {speedup_str}** |
+| **Phase Characteristics** | `{phase_note_fir}` | `{phase_note_iir}` | Structural Property |
 | **Stability** | Unconditionally Stable | Stable (SOS form) | Verified |
 """
                     st.markdown(summary_md)
@@ -942,8 +1023,8 @@ elif workspace.startswith("5"):
                 ax1.grid(True, alpha=0.3)
                 ax1.legend()
 
-                ax2.plot(wf_fir, phi_fir, label="FIR (Linear Phase)", color="#1f77b4", lw=1.8)
-                ax2.plot(wf_iir, phi_iir, label="IIR (Non-linear Phase)", color="#ff7f0e", lw=1.8, linestyle="--")
+                ax2.plot(wf_fir, phi_fir, label="FIR Phase", color="#1f77b4", lw=1.8)
+                ax2.plot(wf_iir, phi_iir, label="IIR Phase", color="#ff7f0e", lw=1.8, linestyle="--")
                 ax2.set_title("Phase Response Comparison")
                 ax2.set_xlabel("Frequency (Hz)")
                 ax2.set_ylabel("Phase (radians)")
@@ -974,6 +1055,8 @@ elif workspace.startswith("6"):
     if cur_sig is None:
         st.error("No audio signal loaded.")
     else:
+        sig_len = len(cur_sig) if cur_sig.ndim == 1 else len(cur_sig[:, 0])
+
         st.subheader("Fast Fourier Transform (FFT) Magnitude Spectrum")
         c_fft1, c_fft2 = st.columns([1, 2])
 
@@ -998,25 +1081,40 @@ elif workspace.startswith("6"):
         st.subheader("Short-Time Fourier Transform (STFT) Spectrogram")
         st.caption("Accurate calibrated units: dBFS/Hz for power spectral density, dBFS for spectrum.")
 
-        c_stft1, c_stft2 = st.columns([1, 2])
+        # Adapt nperseg options based on recording length
+        standard_segments = [256, 512, 1024, 2048, 4096]
+        valid_segments = [s for s in standard_segments if s <= sig_len]
 
-        with c_stft1:
-            nperseg_val = st.select_slider("Segment Length (nperseg):", options=[256, 512, 1024, 2048, 4096], value=1024)
-            scaling_mode = st.radio("Spectrogram Scaling:", ["density (dBFS/Hz)", "spectrum (dBFS)"], index=0)
-            sc_val = "density" if "density" in scaling_mode else "spectrum"
-            stft_max_f = st.slider("Spectrogram Max Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
+        if not valid_segments:
+            st.warning(
+                f"Signal length ({sig_len} samples) is too short for standard STFT analysis (minimum segment length is 256 samples). "
+                "Spectrogram computation requires longer recordings."
+            )
+        else:
+            default_val = 1024 if 1024 in valid_segments else valid_segments[-1]
 
-        with c_stft2:
-            t_spec, f_spec, sxx_db = fft_mod.compute_spectrogram(
-                cur_sig, sr, nperseg=nperseg_val, scaling=sc_val
-            )
-            unit_label = "dBFS/Hz" if sc_val == "density" else "dBFS"
-            fig_spec = vis_mod.plot_spectrogram(
-                times=t_spec,
-                frequencies=f_spec,
-                Sxx_db=sxx_db,
-                title=f"Audio Spectrogram (STFT, Scaling: {unit_label})",
-                max_freq=float(stft_max_f),
-            )
-            st.pyplot(fig_spec)
-            plt.close(fig_spec)
+            c_stft1, c_stft2 = st.columns([1, 2])
+
+            with c_stft1:
+                nperseg_val = st.select_slider("Segment Length (nperseg):", options=valid_segments, value=default_val)
+                scaling_mode = st.radio("Spectrogram Scaling:", ["density (dBFS/Hz)", "spectrum (dBFS)"], index=0)
+                sc_val = "density" if "density" in scaling_mode else "spectrum"
+                stft_max_f = st.slider("Spectrogram Max Frequency (Hz):", 500, sr // 2, min(sr // 2, 10000), 500)
+
+            with c_stft2:
+                try:
+                    t_spec, f_spec, sxx_db = fft_mod.compute_spectrogram(
+                        cur_sig, sr, nperseg=nperseg_val, scaling=sc_val
+                    )
+                    unit_label = "dBFS/Hz" if sc_val == "density" else "dBFS"
+                    fig_spec = vis_mod.plot_spectrogram(
+                        times=t_spec,
+                        frequencies=f_spec,
+                        Sxx_db=sxx_db,
+                        title=f"Audio Spectrogram (STFT, Scaling: {unit_label})",
+                        max_freq=float(stft_max_f),
+                    )
+                    st.pyplot(fig_spec)
+                    plt.close(fig_spec)
+                except Exception as e:
+                    st.error(f"Spectrogram computation error: {e}")
