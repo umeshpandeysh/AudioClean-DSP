@@ -105,7 +105,41 @@ st.markdown(
     .stTabs [data-baseweb="tab"] {font-weight:700;padding:.68rem .9rem;}
     .stTabs [aria-selected="true"] {color:#2563eb;}
     div[data-testid="stMarkdownContainer"] hr {border-color:var(--ac-line);margin:1.2rem 0;}
-    @media(max-width:900px) {.ac-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    /* Motion system: subtle feedback, never motion that obscures measurements. */
+    .ac-brand-mark {position:relative;overflow:hidden;isolation:isolate;}
+    .ac-brand-mark:after {content:"";position:absolute;inset:-55%;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.34) 50%,transparent 62%);transform:translateX(-120%);animation:ac-sheen 6.5s ease-in-out infinite;z-index:-1;}
+    .ac-wave-graphic {display:flex;align-items:center;gap:3px;height:36px;padding:.35rem .65rem;border:1px solid #e3eaf3;border-radius:10px;background:linear-gradient(135deg,#fff,#f5f9ff);}
+    .ac-wave-graphic span {display:block;width:3px;height:var(--h);border-radius:5px;background:linear-gradient(180deg,#38bdf8,#2563eb);transform-origin:center;animation:ac-wave 1.15s ease-in-out infinite alternate;animation-delay:var(--d);}
+    .ac-top-chip {transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;}
+    .ac-top-chip:hover {transform:translateY(-2px);border-color:#a8c8f4;box-shadow:0 5px 14px rgba(37,99,235,.08);}
+    .ac-live-dot {animation:ac-pulse 2s ease-out infinite;box-shadow:0 0 0 0 rgba(22,163,74,.35);}
+    .ac-status-card {position:relative;overflow:hidden;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;}
+    .ac-status-card:before {content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#38bdf8,#2563eb);opacity:.0;transition:opacity .2s ease;}
+    .ac-status-card:hover {transform:translateY(-3px);border-color:#b9d2f4;box-shadow:0 10px 24px rgba(28,68,120,.08);}
+    .ac-status-card:hover:before {opacity:1;}
+    .ac-page-head {animation:ac-enter .45s ease both;}
+    [data-testid="stVerticalBlockBorderWrapper"] {transition:border-color .2s ease,box-shadow .2s ease;}
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {border-color:#d2dfef;box-shadow:0 8px 24px rgba(20,40,70,.055);}
+    [data-testid="stPlotlyChart"],[data-testid="stImage"] {transition:filter .2s ease,transform .2s ease;}
+    .stButton>button:active,.stDownloadButton>button:active {transform:translateY(0) scale(.985);}
+    .ac-pipeline {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;margin:-.25rem 0 1.25rem;}
+    .ac-pipeline-step {display:flex;align-items:center;gap:.62rem;min-width:0;padding:.65rem .75rem;background:#fff;border:1px solid #e3eaf3;border-radius:11px;transition:all .2s ease;}
+    .ac-pipeline-step.is-active {background:linear-gradient(110deg,#eff6ff,#f8fbff);border-color:#93baf0;box-shadow:inset 0 0 0 1px rgba(37,99,235,.06);}
+    .ac-pipeline-index {display:flex;align-items:center;justify-content:center;flex:0 0 1.65rem;width:1.65rem;height:1.65rem;border-radius:8px;background:#eef2f7;color:#64748b;font-size:.72rem;font-weight:800;}
+    .ac-pipeline-step.is-active .ac-pipeline-index {background:#2563eb;color:#fff;box-shadow:0 3px 9px rgba(37,99,235,.2);}
+    .ac-pipeline-name {font-size:.76rem;font-weight:750;color:#34445c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ac-pipeline-step.is-active .ac-pipeline-name {color:#1d4ed8;}
+    @keyframes ac-wave {from{transform:scaleY(.35);opacity:.65;}to{transform:scaleY(1);opacity:1;}}
+    @keyframes ac-pulse {0%{box-shadow:0 0 0 0 rgba(22,163,74,.32);}70%{box-shadow:0 0 0 7px rgba(22,163,74,0);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
+    @keyframes ac-sheen {0%,65%{transform:translateX(-120%);}85%,100%{transform:translateX(120%);}}
+    @keyframes ac-enter {from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+    @media(prefers-reduced-motion:reduce) {
+      *,*:before,*:after {animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;}
+    }
+    @media(max-width:900px) {
+      .ac-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .ac-pipeline{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
     @media(max-width:640px) {
       .block-container{padding:1rem .9rem 2rem;}
       .ac-topbar{align-items:flex-start;flex-direction:column;}
@@ -359,6 +393,9 @@ st.markdown(
         </div>
       </div>
       <div class="ac-top-meta">
+        <div class="ac-wave-graphic" role="img" aria-label="Decorative animated audio waveform">
+          <span style="--h:9px;--d:-.1s"></span><span style="--h:18px;--d:-.25s"></span><span style="--h:26px;--d:-.4s"></span><span style="--h:13px;--d:-.55s"></span><span style="--h:30px;--d:-.7s"></span><span style="--h:17px;--d:-.85s"></span><span style="--h:24px;--d:-1s"></span><span style="--h:10px;--d:-1.15s"></span><span style="--h:21px;--d:-1.3s"></span><span style="--h:14px;--d:-1.45s"></span><span style="--h:28px;--d:-1.6s"></span><span style="--h:11px;--d:-1.75s"></span><span style="--h:20px;--d:-1.9s"></span><span style="--h:8px;--d:-2.05s"></span>
+        </div>
         <span class="ac-top-chip"><span class="ac-live-dot"></span>Session active</span>
         <span class="ac-top-chip">Python · SciPy</span>
         <span class="ac-top-chip">Build 1.4</span>
@@ -393,6 +430,28 @@ if active_sig is not None:
         """,
         unsafe_allow_html=True,
     )
+
+pipeline_stage = {
+    "1": "ingest",
+    "2": "noise",
+    "3": "filter",
+    "4": "filter",
+    "5": "compare",
+    "6": "analyze",
+}.get(workspace_key, "ingest")
+pipeline_steps = [
+    ("ingest", "01", "Ingest signal"),
+    ("noise", "02", "Prepare noise"),
+    ("filter", "03", "Design filters"),
+    ("compare", "04", "Compare & analyze"),
+]
+pipeline_html = "".join(
+    f'<div class="ac-pipeline-step {"is-active" if step_id == pipeline_stage else ""}">'
+    f'<span class="ac-pipeline-index">{number}</span>'
+    f'<span class="ac-pipeline-name">{label}</span></div>'
+    for step_id, number, label in pipeline_steps
+)
+st.markdown(f'<div class="ac-pipeline" aria-label="DSP workflow overview">{pipeline_html}</div>', unsafe_allow_html=True)
 
 # =============================================================================
 # WORKSPACE 1: Audio Workspace
