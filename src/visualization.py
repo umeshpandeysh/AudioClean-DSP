@@ -12,6 +12,51 @@ import numpy as np
 from src.preprocessing import align_signal_lengths, convert_to_mono
 
 
+# Consistent visual language for every engineering plot.
+_COLORS = {
+    "signal": "#2563EB",
+    "noisy": "#D97706",
+    "filtered": "#0F9D78",
+    "spectrum": "#2563EB",
+    "response": "#0F766E",
+    "phase": "#7C3AED",
+    "reference": "#64748B",
+    "threshold": "#D97706",
+    "cutoff": "#DC6B63",
+}
+
+
+def _style_axes(ax: plt.Axes) -> None:
+    """Apply consistent, publication-friendly styling without changing data."""
+    ax.set_facecolor("#FFFFFF")
+    ax.set_axisbelow(True)
+    ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
+    ax.tick_params(axis="both", colors="#52627A", labelsize=9, length=3, width=0.7)
+    ax.xaxis.label.set_color("#34445C")
+    ax.yaxis.label.set_color("#34445C")
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("#C9D4E2")
+        ax.spines[side].set_linewidth(0.8)
+
+
+def _create_figure(figsize: Tuple[float, float]) -> Tuple[plt.Figure, plt.Axes]:
+    """Create a consistently styled single-axis figure."""
+    fig, ax = plt.subplots(figsize=figsize, facecolor="#FFFFFF")
+    _style_axes(ax)
+    return fig, ax
+
+
+def _style_legend(ax: plt.Axes, **kwargs) -> None:
+    """Use a restrained legend treatment that stays readable on white plots."""
+    legend = ax.legend(frameon=True, facecolor="#FFFFFF", edgecolor="#DCE4EF",
+                       framealpha=0.96, **kwargs)
+    if legend is not None:
+        for text in legend.get_texts():
+            text.set_color("#34445C")
+
+
 def plot_waveform(
     audio: np.ndarray,
     sample_rate: int,
@@ -49,10 +94,10 @@ def plot_waveform(
     num_samples = audio.shape[0]
     t = np.arange(num_samples, dtype=np.float64) / float(sample_rate)
 
-    fig, ax = plt.subplots(figsize=(10, 3.5))
+    fig, ax = _create_figure((11, 4.0))
 
     if audio.ndim == 1:
-        ax.plot(t, audio, color="#1f77b4", linewidth=0.8, label="Mono Audio")
+        ax.plot(t, audio, color=_COLORS["signal"], linewidth=0.8, label="Mono Audio")
     elif audio.ndim == 2:
         for ch in range(audio.shape[1]):
             ax.plot(t, audio[:, ch], linewidth=0.8, alpha=0.85, label=f"Channel {ch + 1}")
@@ -60,10 +105,10 @@ def plot_waveform(
         plt.close(fig)
         raise ValueError(f"Unsupported audio dimensionality: {audio.ndim}D.")
 
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#14243B", loc="left", pad=12)
     ax.set_xlabel("Time (seconds)", fontsize=10)
     ax.set_ylabel("Amplitude (Normalized)", fontsize=10)
-    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
     ax.set_ylim(-1.05, 1.05)
     ax.axhline(0, color="black", linewidth=0.6, alpha=0.5)
 
@@ -72,7 +117,7 @@ def plot_waveform(
             ax.set_xlim(time_range[0], time_range[1])
 
     if audio.ndim == 2:
-        ax.legend(loc="upper right")
+        _style_legend(ax, loc="upper right")
 
     fig.tight_layout()
 
@@ -116,7 +161,7 @@ def plot_fft_spectrum(
     plt.Figure
         Matplotlib Figure object.
     """
-    fig, ax = plt.subplots(figsize=(10, 3.5))
+    fig, ax = _create_figure((11, 4.0))
 
     y_data = magnitude
     if db_scale:
@@ -128,10 +173,10 @@ def plot_fft_spectrum(
     else:
         ax.set_ylabel("Linear Amplitude", fontsize=10)
 
-    ax.plot(frequencies, y_data, color="#d62728", linewidth=1.0)
+    ax.plot(frequencies, y_data, color=_COLORS["noisy"], linewidth=1.0)
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
-    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
 
     if max_freq is not None and max_freq > 0:
         ax.set_xlim(0, max_freq)
@@ -180,7 +225,7 @@ def plot_spectrogram(
     plt.Figure
         Matplotlib Figure object.
     """
-    fig, ax = plt.subplots(figsize=(10, 4.0))
+    fig, ax = _create_figure((11, 4.5))
 
     # Determine frequency limit
     if max_freq is not None and 0 < max_freq < frequencies[-1]:
@@ -200,7 +245,9 @@ def plot_spectrogram(
     )
 
     cbar = fig.colorbar(mesh, ax=ax)
-    cbar.set_label("Power Spectral Density (dB/Hz)", fontsize=9)
+    cbar.set_label("Power Spectral Density (dB/Hz)", fontsize=9, color="#34445C")
+    cbar.ax.tick_params(labelsize=8, colors="#52627A")
+    cbar.outline.set_edgecolor("#C9D4E2")
 
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.set_xlabel("Time (seconds)", fontsize=10)
@@ -249,23 +296,23 @@ def plot_filter_response(
     plt.Figure
         Matplotlib Figure object.
     """
-    fig, ax = plt.subplots(figsize=(9, 3.5))
+    fig, ax = _create_figure((11, 4.0))
 
-    ax.plot(frequencies, magnitude_db, color="#2ca02c", linewidth=1.5, label="Magnitude Response |H(f)|")
+    ax.plot(frequencies, magnitude_db, color=_COLORS["filtered"], linewidth=1.5, label="Magnitude Response |H(f)|")
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
     ax.set_ylabel("Attenuation (dB)", fontsize=10)
-    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
 
     # Highlight -3 dB passband edge
-    ax.axhline(-3.0, color="orange", linestyle=":", linewidth=1.0, label="-3 dB Cutoff Threshold")
+    ax.axhline(-3.0, color=_COLORS["threshold"], linestyle=":", linewidth=1.0, label="-3 dB Cutoff Threshold")
 
     if cutoff_hz is not None:
         if isinstance(cutoff_hz, (list, tuple, np.ndarray)):
             for idx, fc in enumerate(cutoff_hz):
                 ax.axvline(
                     float(fc),
-                    color="red",
+                    color=_COLORS["cutoff"],
                     linestyle="--",
                     linewidth=1.0,
                     label=f"Cutoff fc_{idx+1}={fc:.1f} Hz",
@@ -273,7 +320,7 @@ def plot_filter_response(
         else:
             ax.axvline(
                 float(cutoff_hz),
-                color="red",
+                color=_COLORS["cutoff"],
                 linestyle="--",
                 linewidth=1.0,
                 label=f"Cutoff fc={cutoff_hz:.1f} Hz",
@@ -286,7 +333,7 @@ def plot_filter_response(
     else:
         ax.set_xlim(0, float(frequencies[-1]))
 
-    ax.legend(loc="lower right", fontsize=8)
+    _style_legend(ax, loc="lower right", fontsize=8)
     fig.tight_layout()
 
     if save_path is not None:
@@ -326,20 +373,20 @@ def plot_phase_response(
     plt.Figure
         Matplotlib Figure object.
     """
-    fig, ax = plt.subplots(figsize=(9, 3.5))
+    fig, ax = _create_figure((11, 4.0))
 
-    ax.plot(frequencies, phase_radians, color="#9467bd", linewidth=1.2, label="Unwrapped Phase theta(f)")
+    ax.plot(frequencies, phase_radians, color=_COLORS["phase"], linewidth=1.2, label="Unwrapped Phase theta(f)")
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.set_xlabel("Frequency (Hz)", fontsize=10)
     ax.set_ylabel("Phase (radians)", fontsize=10)
-    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.grid(True, which="major", color="#DCE4EF", linestyle="-", linewidth=0.7, alpha=0.9)
 
     if max_freq is not None and max_freq > 0:
         ax.set_xlim(0, max_freq)
     else:
         ax.set_xlim(0, float(frequencies[-1]))
 
-    ax.legend(loc="upper right", fontsize=8)
+    _style_legend(ax, loc="upper right", fontsize=8)
     fig.tight_layout()
 
     if save_path is not None:
@@ -414,34 +461,36 @@ def plot_signal_comparison(
     num_samples = len(m_orig)
     t = np.arange(num_samples, dtype=np.float64) / float(sample_rate)
 
-    fig, axes = plt.subplots(3, 1, figsize=(10, 6.5), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(11, 7.2), sharex=True, facecolor="#FFFFFF")
+    for axis in axes:
+        _style_axes(axis)
 
     # 1. Clean Reference
-    axes[0].plot(t, m_orig, color="#1f77b4", linewidth=0.8)
+    axes[0].plot(t, m_orig, color=_COLORS["signal"], linewidth=0.8)
     axes[0].set_title("Original Clean Audio s[n]", fontsize=10, fontweight="bold")
     axes[0].set_ylabel("Amplitude", fontsize=9)
-    axes[0].grid(True, linestyle="--", alpha=0.5)
+    axes[0].grid(True, which="major", color="#DCE4EF", linewidth=0.7)
     axes[0].set_ylim(-1.05, 1.05)
 
     # 2. Noisy Signal
-    axes[1].plot(t, m_noisy, color="#d62728", linewidth=0.8)
+    axes[1].plot(t, m_noisy, color=_COLORS["noisy"], linewidth=0.8)
     axes[1].set_title("Degraded Noisy Audio x[n] = s[n] + w[n]", fontsize=10, fontweight="bold")
     axes[1].set_ylabel("Amplitude", fontsize=9)
-    axes[1].grid(True, linestyle="--", alpha=0.5)
+    axes[1].grid(True, which="major", color="#DCE4EF", linewidth=0.7)
     axes[1].set_ylim(-1.05, 1.05)
 
     # 3. Filtered Signal
-    axes[2].plot(t, m_filt, color="#2ca02c", linewidth=0.8)
+    axes[2].plot(t, m_filt, color=_COLORS["filtered"], linewidth=0.8)
     axes[2].set_title("Cleaned Filtered Audio y[n]", fontsize=10, fontweight="bold")
     axes[2].set_ylabel("Amplitude", fontsize=9)
     axes[2].set_xlabel("Time (seconds)", fontsize=10)
-    axes[2].grid(True, linestyle="--", alpha=0.5)
+    axes[2].grid(True, which="major", color="#DCE4EF", linewidth=0.7)
     axes[2].set_ylim(-1.05, 1.05)
 
     if time_range is not None and time_range[0] < time_range[1]:
         axes[2].set_xlim(time_range[0], time_range[1])
 
-    fig.suptitle(title, fontsize=12, fontweight="bold")
+    fig.suptitle(title, fontsize=13, fontweight="bold", color="#14243B", x=0.08, ha="left")
     fig.tight_layout()
 
     if save_path is not None:
