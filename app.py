@@ -672,7 +672,7 @@ if workspace.startswith("1"):
 
         st.markdown("---")
         with st.container(border=True):
-        st.subheader("Time-Domain Waveform")
+            st.subheader("Time-Domain Waveform")
             if cur_sig is not None:
                 fig_wave = vis_mod.plot_waveform(
                     cur_sig, st.session_state.sample_rate, title="Active Signal Time-Domain Waveform"
@@ -1433,7 +1433,8 @@ elif workspace.startswith("6"):
             standard_segments = [256, 512, 1024, 2048, 4096]
             valid_segments = [s for s in standard_segments if s <= sig_len]
 
-            if not valid_segments:            st.warning(
+            if not valid_segments:
+                st.warning(
                     f"Signal length ({sig_len} samples) is too short for standard STFT analysis (minimum segment length is 256 samples). "
                     "Spectrogram computation requires longer recordings."
                 )
