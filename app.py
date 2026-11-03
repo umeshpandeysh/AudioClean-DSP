@@ -584,7 +584,8 @@ if workspace.startswith("1"):
                 if ref_file is None:
                     if st.session_state.ref_file_hash is not None or st.session_state.reference_audio is not None:
                         reset_reference_uploader()
-                        st.info("External reference removed. Switched to no-reference evaluation.")                    st.rerun()
+                        st.info("External reference removed. Switched to no-reference evaluation.")
+                        st.rerun()
                 else:
                     current_primary_hash = st.session_state.primary_file_hash or "synthetic_demo"
                     r_bytes = ref_file.getvalue()
